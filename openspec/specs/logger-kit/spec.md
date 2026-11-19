@@ -17,11 +17,15 @@ Das Paket MUST unter macOS ab Version 12 und unter iOS/iPadOS ab Version 27 baue
 - **THEN** gelingt der Build ohne Warnungen zur Verfügbarkeit
 
 ### Requirement: Eigenständigkeit
-Das Paket MUST ohne andere Teile des gpsloader-Repositorys und ohne Pakete von Drittanbietern bauen. Es darf nur die Systembibliotheken der Plattform nutzen.
+Das Paket MUST aus einem frischen Checkout seines Repositorys und als Abhängigkeit per Repository-URL bauen, ohne andere Repositories und ohne Pakete von Drittanbietern. Es darf nur die Systembibliotheken der Plattform nutzen.
 
 #### Scenario: Herausgelöst bauen
-- **WHEN** der Ordner `Packages/GPSLoggerKit` allein an einen anderen Ort kopiert und dort gebaut und getestet wird
-- **THEN** gelingen Build und Tests
+- **WHEN** das Repository frisch geklont und dort `swift build` und `swift test` ausgeführt werden
+- **THEN** gelingen Build und Tests, ohne dass weitere Repositories vorhanden sind
+
+#### Scenario: Einbindung per URL
+- **WHEN** ein leeres Swift-Paket GPSLoggerKit per Repository-URL und veröffentlichter Version als Abhängigkeit angibt und für macOS und iOS gebaut wird
+- **THEN** löst der Swift Package Manager nur dieses Paket auf, und beide Builds gelingen
 
 ### Requirement: Lizenz und Herkunft
 Das Paket MUST unter der MIT-Lizenz stehen und eine Lizenzdatei enthalten. Es MUST keinen Code enthalten, der aus GPL- oder CC-BY-SA-lizenziertem Quelltext übersetzt oder kopiert wurde. Für jedes Format MUST die Dokumentation des Pakets die verwendeten Grundlagen nennen: Spezifikationen, eigener Code oder Black-Box-Beobachtung.
