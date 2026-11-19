@@ -59,7 +59,8 @@ swift test
 
 if grep -q '\.iOS(' Package.swift; then
     step "Running tests (${IOS_DESTINATION})"
-    xcodebuild test -scheme "${PACKAGE}" -destination "${IOS_DESTINATION}" -quiet
+    # Serial: under parallel load the simulator misses the one-second limit of the cancellation tests.
+    xcodebuild test -scheme "${PACKAGE}" -destination "${IOS_DESTINATION}" -parallel-testing-enabled NO -quiet
 fi
 
 # --- Tag and release --------------------------------------------------------------------------------------

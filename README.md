@@ -107,5 +107,5 @@ MIT, see `LICENSE`.
 
 ```sh
 swift test
-xcodebuild test -scheme GPSLoggerKit -destination 'platform=iOS Simulator,OS=27.1,name=iPhone Duo'
+xcodebuild test -scheme GPSLoggerKit -destination 'platform=iOS Simulator,OS=27.1,name=iPhone Duo' -parallel-testing-enabled NO
 ```
