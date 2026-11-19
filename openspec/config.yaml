@@ -1,0 +1,87 @@
+schema: spec-driven
+
+# Projektkontext: Leitplanken für alle OpenSpec-Artefakte dieses Repositorys.
+# Herkunft: aufgeteilt aus openspec/config.yaml von https://github.com/mytracks/gpsloader
+# (Change split-repositories, 2026-11-19). Die Planungshistorie bis dahin liegt dort unter
+# openspec/changes/archive/.
+context: |
+  ## Produkt
+  GPSLoggerKit ist eine eigenständige Swift-Bibliothek mit nativen Implementierungen von
+  Dateiformaten und Logger-Protokollen von GPS-Loggern. Sie bildet daraus ein gemeinsames
+  Datenmodell und erzeugt GPX 1.1. Sie wird von myTracks Loader (Repository mytracks/gpsloader,
+  GPL) und von myTracks Neo (App-Store-App ohne offenen Quellcode) per Paket-URL und Version
+  eingebunden. Deshalb MUST jede Änderung für beide Nutzer tragbar sein und darf keine
+  App-spezifischen Annahmen enthalten.
+
+  ## Plattformen und Technik (entschieden)
+  - macOS 12+ und iOS/iPadOS 27+. Formate, Parser, Protokolllogik und GPX-Erzeugung laufen auf
+    beiden Plattformen. Transporte (seriell/termios, IOHID, IOBluetooth) gehören nicht in dieses
+    Paket; sie stellt die App über DeviceConnection bereit.
+  - Nur Swift: Swift 6 Language Mode, Strict Concurrency, async/await, Sendable, value types.
+    Kein Objective-C-, C- oder C++-Quellcode. Keine Pakete von Drittanbietern.
+  - APIs, die neuer als macOS 12 sind, nur mit `#available`-Fallback.
+  - Ausgabe: GPX 1.1, Zeiten in UTC (ISO 8601 mit Z), ohne Erweiterungen.
+  - Alles ohne Hardware testbar: aufgezeichnete Gerätedialoge und synthetische Dateien als
+    Fixtures, simulierte Geräte für Protokolle. Keine echten Ortsdaten in Specs und Tests.
+  - Versionen nach Semantic Versioning, Git-Tags wie `0.1.0`, Start mit 0.1.0 (entschieden am
+    2026-11-19). Unter 1.0.0 darf eine neue Nebenversion Inkompatibles bringen; Nutzer binden
+    `.upToNextMinor` ein.
+
+  ## Lizenz und Clean-Room (entschieden am 2026-11-03)
+  - Lizenz: MIT. KEIN GPL-Code. Quelltext von gpsbabel, igotu2gpx, wsg2000.c, rgm3800, iTU4l und
+    anderen GPL-/CC-BY-SA-Projekten darf weder übersetzt noch kopiert noch als Vorlage gelesen
+    werden. Das gilt für jede Arbeit in diesem Repository.
+  - Zulässige Grundlagen: öffentliche Spezifikationen (z. B. NMEA-Satzbeschreibungen,
+    Topografix-XSD, Garmin FIT SDK, TCX-XSD, FAI-IGC-Spezifikation, SkyTraq-Application-Notes,
+    Locosys-Protokollspezifikation), der eigene myTracks-Code des Entwicklers sowie
+    Black-Box-Beobachtung (Beispieldateien, Ausgaben des gpsbabel-Binaries, aufgezeichnete
+    Gerätedialoge). Für jedes Format bzw. Protokoll nennt das Design die genutzten Quellen, und
+    PROVENANCE.md hat dafür einen Abschnitt.
+  - Portierungen aus GPL-Quellen gehören nie hierher, sondern in GPSLoggerKitGPL
+    (Repository mytracks/GPSLoggerKitGPL), das von diesem Paket abhängt. Dieses Paket hängt nie
+    davon ab. Ist für eine Familie GPL-Quelltext gelesen worden, bleibt sie dort.
+  - Die NAL-Beschreibung in gpsloader/docs/legacy-analysis.md stammt aus wsg2000.c und ist
+    deshalb keine zulässige Quelle.
+
+  ## Umfang (Familien in diesem Paket)
+  - Dateiformate: NMEA 0183, GPX als Eingang, Garmin FIT, TCX, Suunto Ambit SML/XML, IGC,
+    KML/KMZ, CSV-Logger Columbus V-900/Visiontac und iBlue-CSV.
+  - Geräteprotokolle: GNS 2000 / GNS 2000 plus (Clean-Room aus dem eigenen myTracks-Treiber
+    GpsDriver/GNS2000.m, Entscheidung vom 2026-11-13).
+  - Offen: WSG-2000 NAL, entschieden als Black-Box in diesem Paket (ohne wsg2000.c).
+    BG728 (Maptaq Trip IQ): Zuordnung noch nicht entschieden (noch nicht bestätigt).
+  - Neue Familien: Das Proposal legt fest, ob sie Clean-Room hier oder als Portierung in
+    GPSLoggerKitGPL entstehen, und holt die Entscheidung beim Entwickler ein.
+
+  ## Rahmenbedingungen der Entwicklung
+  - Der Entwickler ist sehr erfahren mit macOS und myTracks. Fachliche Rückfragen zu Geräten
+    sind sinnvoll, Grundlagenerklärungen nicht.
+  - Der Originalcode von myTracks liegt im Nachbar-Checkout unter ../gpsloader/input/mytracks4mac/
+    (Git-Repository, nur lesen, nie ändern, nie übernehmen). Fachliche Analyse:
+    ../gpsloader/docs/legacy-analysis.md.
+  - Die Nutzer-Apps liegen in eigenen Repositories. Ein Change hier ändert nur dieses Paket;
+    die Apps übernehmen neue Versionen mit eigenen Changes.
+
+rules:
+  proposal:
+    - Auf Deutsch schreiben.
+    - Betroffene Formate, Geräte und Treiberfamilien explizit nennen.
+    - Immer einen Abschnitt "Nicht im Umfang" aufnehmen.
+    - Bei einer neuen Familie die Grundlagen (Spezifikation, eigener Code, Black-Box) nennen und
+      bestätigen, dass kein GPL-/CC-BY-SA-Quelltext genutzt wird.
+    - Angeben, ob die Änderung für die Nutzer kompatibel ist (Patch, Nebenversion).
+  specs:
+    - Fließtext auf Deutsch. Jede Requirement-Aussage enthält das Schlüsselwort SHALL oder MUST,
+      weil der OpenSpec-Validator das verlangt (z. B. "Das Paket SHALL …").
+    - Requirement-Texte höchstens 500 Zeichen; Beispiele und Sonderfälle in Szenarien.
+    - Szenarien im Format WHEN/THEN, ohne Hardware prüfbar (Fixtures, simulierte Geräte).
+  design:
+    - Auf Deutsch schreiben.
+    - Für jedes Format bzw. Protokoll die genutzten Quellen nennen (Spezifikation mit Fundstelle,
+      eigener myTracks-Code mit Pfad, Black-Box-Beobachtung).
+    - "Swift-6-Concurrency explizit behandeln: Isolation, Sendable, Timeouts, Abbruch."
+  tasks:
+    - Auf Deutsch schreiben.
+    - Zu jedem Parser-/Protokoll-Task gehört ein Test-Task mit Fixtures.
+    - PROVENANCE.md und README im selben Change pflegen.
+    - Manuelle Hardware-Tests als eigene, klar markierte Tasks ("[manuell, Hardware]").

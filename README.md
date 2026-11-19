@@ -8,6 +8,22 @@ and GPX 1.1 output.
 - Swift 6 language mode, no third-party dependencies.
 - License: MIT (see `LICENSE`).
 
+## Installation
+
+Swift Package Manager, with the version range of the current minor release (below 1.0.0 a new minor release may
+contain incompatible changes):
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/mytracks/GPSLoggerKit.git", .upToNextMinor(from: "0.1.0")),
+],
+targets: [
+    .target(name: "MyTarget", dependencies: [.product(name: "GPSLoggerKit", package: "GPSLoggerKit")]),
+]
+```
+
+Releases are listed on GitHub with release notes (`docs/releases/`).
+
 ## Formats
 
 | ID | Format | Read | Notes |
@@ -73,9 +89,19 @@ author's own code, and black-box observation (sample files, recorded device dial
 other programs). `PROVENANCE.md` lists the sources for every format; a test enforces that every
 format in the catalog has an entry.
 
-Ports from GPL sources are never added here. In gpsloader they live in the separate package
-`GPSLoggerKitGPL` (GPL-3.0-or-later), which builds on this package's `FormatCatalog`; this package
-does not depend on it.
+Ports from GPL sources are never added here. They live in the separate package
+[GPSLoggerKitGPL](https://github.com/mytracks/GPSLoggerKitGPL) (GPL-3.0-or-later), which builds on this
+package's `FormatCatalog`; this package does not depend on it.
+
+## History
+
+The package was developed in [mytracks/gpsloader](https://github.com/mytracks/gpsloader) and moved to this
+repository on 2026-11-19 with its Git history. Requirements live in `openspec/`; the planning history up to the
+move, including the clean-room decisions per format, is in gpsloader under `openspec/changes/archive/`.
+
+## License
+
+MIT, see `LICENSE`.
 
 ## Tests
 
