@@ -1,77 +1,77 @@
 # tcx-import Specification
 
 ## Purpose
-Liest Dateien im Garmin Training Center XML (TCX, Version 2) ein, wie sie Sportuhren, Garmin Connect und Trainings-Apps exportieren. Aus Aktivitäten und Kursen entstehen Tracks und Wegpunkte, ohne gpsbabel.
+Reads files in Garmin Training Center XML (TCX, version 2) as exported by sports watches, Garmin Connect and training apps. Activities and courses become tracks and waypoints, without gpsbabel.
 
 ## Requirements
 
-### Requirement: Aktivitäten
-Jede `Activity` unter `Activities` SHALL einen Track ohne Namen ergeben. Jedes `Track`-Element ihrer Runden (`Lap`) SHALL ein eigenes Segment ergeben, in der Reihenfolge der Datei. Segmente ohne Punkte SHALL entfallen.
+### Requirement: Activities
+Every `Activity` below `Activities` SHALL result in a track without a name. Every `Track` element of its laps (`Lap`) SHALL result in a segment of its own, in the order of the file. Segments without points SHALL be dropped.
 
-#### Scenario: Zwei Runden
-- **WHEN** eine Aktivität zwei Runden mit je einem `Track` von 10 Trackpunkten hat
-- **THEN** entsteht ein Track mit zwei Segmenten zu je 10 Punkten
+#### Scenario: Two laps
+- **WHEN** an activity has two laps with one `Track` of 10 track points each
+- **THEN** one track with two segments of 10 points each results
 
-#### Scenario: Zwei Aktivitäten
-- **WHEN** eine Datei zwei Aktivitäten enthält
-- **THEN** entstehen zwei Tracks in der Reihenfolge der Datei
+#### Scenario: Two activities
+- **WHEN** a file contains two activities
+- **THEN** two tracks result in the order of the file
 
-### Requirement: Trackpunkte
-Ein `Trackpoint` mit `Position` SHALL einen Punkt ergeben:
-- **Position:** `LatitudeDegrees` und `LongitudeDegrees`.
-- **Zeit:** `Time` (XML-Schema `dateTime`).
-- **Höhe:** `AltitudeMeters`.
-- **Geschwindigkeit:** `Speed` aus der Erweiterung `TPX` (ActivityExtension v2) in m/s, falls vorhanden.
+### Requirement: Track points
+A `Trackpoint` with `Position` SHALL result in a point:
+- **Position:** `LatitudeDegrees` and `LongitudeDegrees`.
+- **Time:** `Time` (XML Schema `dateTime`).
+- **Elevation:** `AltitudeMeters`.
+- **Speed:** `Speed` from the extension `TPX` (ActivityExtension v2) in m/s, if present.
 
-Herzfrequenz, Trittfrequenz, Distanz und Rundenwerte SHALL ignoriert werden.
+Heart rate, cadence, distance and lap values SHALL be ignored.
 
-#### Scenario: Punkt mit Geschwindigkeit
-- **WHEN** ein `Trackpoint` die Zeit `2026-05-01T08:00:00Z`, die Position 53,55° / 9,99°, die Höhe 12,5 m und die TPX-Geschwindigkeit 3,2 enthält
-- **THEN** entsteht ein Punkt mit diesen Werten und der Geschwindigkeit 3,2 m/s
+#### Scenario: Point with speed
+- **WHEN** a `Trackpoint` contains the time `2026-05-01T08:00:00Z`, the position 53.55° / 9.99°, the elevation 12.5 m and the TPX speed 3.2
+- **THEN** a point with these values and the speed 3.2 m/s results
 
-### Requirement: Unvollständige Trackpunkte
-Trackpunkte ohne `Position` SHALL ohne Warnung übergangen werden. Eine Position außerhalb des gültigen Bereichs oder eine nicht lesbare Zahl MUST verworfen und als Warnung gezählt werden. Ein Punkt ohne lesbare Zeit SHALL ohne Zeit übernommen und als Warnung gezählt werden.
+### Requirement: Incomplete track points
+Track points without `Position` SHALL be skipped without a warning. A position outside the valid range or an unreadable number MUST be discarded and counted as a warning. A point without a readable time SHALL be taken over without a time and counted as a warning.
 
-#### Scenario: Pause ohne Position
-- **WHEN** ein `Trackpoint` nur `Time` und `HeartRateBpm` enthält
-- **THEN** entsteht daraus kein Punkt und keine Warnung
+#### Scenario: Pause without position
+- **WHEN** a `Trackpoint` contains only `Time` and `HeartRateBpm`
+- **THEN** neither a point nor a warning results from it
 
-#### Scenario: Ungültige Breite
-- **WHEN** ein `Trackpoint` die Breite 95 hat
-- **THEN** wird er verworfen, und eine Warnung zählt ihn
+#### Scenario: Invalid latitude
+- **WHEN** a `Trackpoint` has the latitude 95
+- **THEN** it is discarded, and a warning counts it
 
-#### Scenario: Fehlende Zeit
-- **WHEN** ein `Trackpoint` eine Position, aber kein `Time` hat
-- **THEN** entsteht ein Punkt ohne Zeit, und eine Warnung zählt die Punkte ohne Datum
+#### Scenario: Missing time
+- **WHEN** a `Trackpoint` has a position but no `Time`
+- **THEN** a point without a time results, and a warning counts the points without a date
 
-### Requirement: Kurse
-Jeder `Course` unter `Courses` SHALL einen Track mit dem Namen aus `Name` ergeben, mit einem Segment je `Track`. Jeder `CoursePoint` SHALL einen Wegpunkt ergeben. Er bekommt `Name`, `Time` und `AltitudeMeters`, falls vorhanden, und `Notes` als Kommentar.
+### Requirement: Courses
+Every `Course` below `Courses` SHALL result in a track with the name from `Name`, with one segment per `Track`. Every `CoursePoint` SHALL result in a waypoint. It gets `Name`, `Time` and `AltitudeMeters` if present, and `Notes` as comment.
 
-#### Scenario: Kurs mit Kurspunkten
-- **WHEN** eine Datei einen Kurs „Elbe“ mit 50 Trackpunkten und zwei Kurspunkten enthält
-- **THEN** enthält die Aufzeichnung einen Track „Elbe“ mit 50 Punkten und zwei Wegpunkten
+#### Scenario: Course with course points
+- **WHEN** a file contains a course "Elbe" with 50 track points and two course points
+- **THEN** the recording contains one track "Elbe" with 50 points and two waypoints
 
-### Requirement: Nicht ausgewertete Inhalte
-Der Import SHALL `MultiSportSession`, `Workouts`, `Folders`, `Author` und unbekannte Erweiterungen ohne Warnung übergehen.
+### Requirement: Content not evaluated
+The import SHALL skip `MultiSportSession`, `Workouts`, `Folders`, `Author` and unknown extensions without a warning.
 
 #### Scenario: Workout
-- **WHEN** eine Datei neben einer Aktivität ein Workout enthält
-- **THEN** entsteht nur der Track der Aktivität, ohne Warnung
+- **WHEN** a file contains a workout next to an activity
+- **THEN** only the track of the activity results, without a warning
 
-### Requirement: Fehler
-Eine Datei, die kein wohlgeformtes XML ist, MUST zu einem Fehler mit Datei und Zeile führen.
+### Requirement: Errors
+A file that is not well-formed XML MUST lead to an error with file and line.
 
-#### Scenario: Abgeschnittene Datei
-- **WHEN** eine TCX-Datei mitten in einem `Trackpoint` endet
-- **THEN** endet das Einlesen mit einem Fehler, der Datei und Zeile nennt
+#### Scenario: Truncated file
+- **WHEN** a TCX file ends in the middle of a `Trackpoint`
+- **THEN** reading ends with an error that names file and line
 
-### Requirement: Erkennung
-Eine Datei SHALL als TCX erkannt werden, wenn ihr erstes Element `TrainingCenterDatabase` ist, mit oder ohne Namensraum-Präfix. Die Dateiendung `.tcx` SHALL nur als Hinweis dienen.
+### Requirement: Detection
+A file SHALL be recognized as TCX if its first element is `TrainingCenterDatabase`, with or without a namespace prefix. The file extension `.tcx` SHALL only serve as a hint.
 
-#### Scenario: TCX mit Endung .xml
-- **WHEN** eine TCX-Datei die Endung `.xml` hat
-- **THEN** schlägt die Erkennung TCX vor und nicht GPX
+#### Scenario: TCX with extension .xml
+- **WHEN** a TCX file has the extension `.xml`
+- **THEN** the detection suggests TCX and not GPX
 
-#### Scenario: GPX bleibt GPX
-- **WHEN** eine GPX-Datei die Endung `.tcx` hat
-- **THEN** schlägt die Erkennung GPX vor
+#### Scenario: GPX stays GPX
+- **WHEN** a GPX file has the extension `.tcx`
+- **THEN** the detection suggests GPX

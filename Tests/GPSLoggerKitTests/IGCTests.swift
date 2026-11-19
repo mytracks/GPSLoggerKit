@@ -34,7 +34,7 @@ private func fixture(_ name: String) throws -> FileInput {
 
 @Suite("IGC – fixes")
 struct IGCFixTests {
-    /// Scenario "Gültiger Fix".
+    /// Scenario "Valid fix".
     @Test func validFix() throws {
         let result = try read(header + "B1101355206343N00006198WA0058700558\n")
         let point = try #require(points(result).first)
@@ -46,14 +46,14 @@ struct IGCFixTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Südlich und östlich".
+    /// Scenario "South and east".
     @Test func southAndEast() throws {
         let point = try #require(points(try read(header + b(lat: "3352000S", lon: "15112500E") + "\n")).first)
         #expect(abs(point.latitude - -33.866667) < 0.000001)
         #expect(abs(point.longitude - 151.208333) < 0.000001)
     }
 
-    /// Scenario "Abgeschnittener Datensatz".
+    /// Scenario "Truncated record".
     @Test func truncatedRecordIsCounted() throws {
         let result = try read(header + b() + "\n" + "B1101405206400N0000\n" + b("110145") + "\n")
         #expect(points(result).count == 2)
@@ -87,14 +87,14 @@ struct IGCFixTests {
 
 @Suite("IGC – altitude and fix")
 struct IGCAltitudeTests {
-    /// Scenario "Gerät ohne Drucksensor".
+    /// Scenario "Device without pressure sensor".
     @Test func gnssAltitudeWithoutPressureSensor() throws {
         let point = try #require(points(try read(header + b(valid: "A", pressure: "00000", gnss: "00412") + "\n")).first)
         #expect(point.elevation == 412)
         #expect(point.quality.fix == .threeD)
     }
 
-    /// Scenario "Fix ohne GNSS-Höhe".
+    /// Scenario "Fix without GNSS altitude".
     @Test func pressureAltitudeWhenFixIsTwoD() throws {
         let point = try #require(points(try read(header + b(valid: "V", pressure: "00380", gnss: "00000") + "\n")).first)
         #expect(point.elevation == 380)
@@ -107,7 +107,7 @@ struct IGCAltitudeTests {
         #expect(point.elevation == 380)
     }
 
-    /// Scenario "Keine Höhe".
+    /// Scenario "No elevation".
     @Test func noAltitude() throws {
         let point = try #require(points(try read(header + b(pressure: "00000", gnss: "00000") + "\n")).first)
         #expect(point.elevation == nil)
@@ -116,13 +116,13 @@ struct IGCAltitudeTests {
 
 @Suite("IGC – extensions")
 struct IGCExtensionTests {
-    /// Scenario "Satelliten".
+    /// Scenario "Satellites".
     @Test func satellitesFromSIU() throws {
         let point = try #require(points(try read(header + "I023638FXA3940SIU\n" + b(extensions: "02509") + "\n")).first)
         #expect(point.quality.satellites == 9)
     }
 
-    /// Scenario "Unbekannte Erweiterung".
+    /// Scenario "Unknown extension".
     @Test func unknownExtensionsAreSkipped() throws {
         let result = try read(header + "I023638GSP3941TRT\n" + b(extensions: "045180") + "\n")
         #expect(points(result).first?.quality.satellites == nil)
@@ -146,7 +146,7 @@ struct IGCExtensionTests {
 
 @Suite("IGC – date, tracks and other records")
 struct IGCDateTests {
-    /// Scenario "Neue Schreibweise".
+    /// Scenario "New notation".
     @Test func newDateForm() throws {
         let point = try #require(points(try read("AXXX001\nHFDTEDATE:150726,01\n" + b() + "\n")).first)
         #expect(point.time == utc(2026, 7, 15, 11, 1, 35))
@@ -157,13 +157,13 @@ struct IGCDateTests {
         #expect(old.time == utc(1985, 1, 1, 11, 1, 35))
     }
 
-    /// Scenario "Flug über Mitternacht".
+    /// Scenario "Flight over midnight".
     @Test func flightOverMidnight() throws {
         let result = try read("AXXX001\nHFDTE311225\n" + b("235958") + "\n" + b("000002") + "\n")
         #expect(points(result).map(\.time) == [utc(2025, 12, 31, 23, 59, 58), utc(2026, 1, 1, 0, 0, 2)])
     }
 
-    /// Scenario "Fehlendes Datum".
+    /// Scenario "Missing date".
     @Test func missingDate() throws {
         let result = try read("AXXX001\n" + b() + "\n" + b("110140") + "\n")
         #expect(points(result).count == 2)
@@ -177,7 +177,7 @@ struct IGCDateTests {
         #expect(Set(result.warnings.map(\.kind)) == [.malformedRecord, .missingDate])
     }
 
-    /// Scenario "Zwei Flüge".
+    /// Scenario "Two flights".
     @Test func oneTrackPerFile() throws {
         let result = try read([("flug1.igc", header + b() + "\n"), ("flug2.igc", header + b("120000") + "\n")])
         #expect(result.recording.tracks.map(\.name) == ["flug1", "flug2"])
@@ -189,7 +189,7 @@ struct IGCDateTests {
         #expect(IGCFileFormat.trackName(for: "noextension") == "noextension")
     }
 
-    /// Scenarios "Aufgabendeklaration" and "Signatur".
+    /// Scenarios "Task declaration" and "Signature".
     @Test func otherRecordsAreIgnored() throws {
         let text = header + "C020726120000020726000102\nC5206343N00006198WTakeoff\nE110135PEV\nF1101350102\nLPLTx\n"
             + "K110135123\n" + b() + "\nGABCDEF0123456789\nGXYZ\n"
@@ -203,7 +203,7 @@ struct IGCDateTests {
         #expect(throws: GPSLoggerError(.noUsableData, fileName: "t.igc")) { try read(header + "LPLTx\n") }
     }
 
-    /// Scenario "Große Datei abbrechen" for IGC.
+    /// Scenario "Cancel a large file" for IGC.
     @Test func stopsSoonAfterCancellation() async throws {
         let file = FileInput(name: "big.igc", data: Data((header + String(repeating: b() + "\r\n", count: 600_000)).utf8))
         let task = Task { try await FileFormats.read([file], format: IGCFileFormat()) }
@@ -223,12 +223,12 @@ struct IGCDetectionTests {
         #expect(FileFormats.detect(prefix: igc, fileName: "flight.igc")?.id == .igc)
     }
 
-    /// Scenario "Endung fehlt".
+    /// Scenario "Extension missing".
     @Test func detectedWithWrongExtension() {
         #expect(FileFormats.detect(prefix: igc, fileName: "flight.txt")?.id == .igc)
     }
 
-    /// Scenario "Keine IGC-Datei".
+    /// Scenario "Not an IGC file".
     @Test func nmeaWithIGCExtension() {
         let text = (0..<3).map { _ in nmea("GPGGA,120000,5144.4694,N,00840.8580,E,1,08,0.9,94.5,M,47.0,M,,") }
             .joined(separator: "\n")

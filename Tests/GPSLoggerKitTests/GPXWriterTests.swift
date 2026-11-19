@@ -26,7 +26,7 @@ struct GPXWriterTests {
 #if os(macOS) // XMLDocument is not available on iOS
     // MARK: Conformance (task 4.1 / 4.2)
 
-    /// Scenario "Validierung gegen das Schema".
+    /// Scenario "Validation against the schema".
     @Test func outputValidatesAgainstGPX11Schema() throws {
         try GPXSchemaValidator.validate(writer.data(for: sample, createdAt: t0))
     }
@@ -62,7 +62,7 @@ struct GPXWriterTests {
 
 #endif
 
-    /// Scenario "Keine Erweiterungen".
+    /// Scenario "No extensions".
     @Test func containsNoExtensions() {
         #expect(!writer.document(for: sample, createdAt: t0).contains("extensions"))
     }
@@ -70,7 +70,7 @@ struct GPXWriterTests {
     // MARK: Content
 
 #if os(macOS) // XMLDocument is not available on iOS
-    /// Scenario "Track mit Segmenten".
+    /// Scenario "Track with segments".
     @Test func trackWithTwoSegments() throws {
         let document = try XMLDocument(data: writer.data(for: sample, createdAt: t0))
         let segments = try document.nodes(forXPath: "/*[local-name()='gpx']/*[local-name()='trk']/*[local-name()='trkseg']")
@@ -82,7 +82,7 @@ struct GPXWriterTests {
 
 #endif
 
-    /// Scenario "Punkt ohne Höhe".
+    /// Scenario "Point without elevation".
     @Test func pointWithoutElevationHasNoEle() {
         let recording = Recording(tracks: [Track(name: "x", segments: [TrackSegment(points: [point(1, 2, ele: nil)])])])
         let text = writer.document(for: recording, createdAt: t0)
@@ -90,7 +90,7 @@ struct GPXWriterTests {
         #expect(text.contains("<time>2026-11-02T14:30:05Z</time>"))
     }
 
-    /// Scenario "Wegpunkt".
+    /// Scenario "Waypoint".
     @Test func waypointIsWrittenAsWpt() {
         #expect(writer.document(for: sample, createdAt: t0).contains("<wpt lat=\"51.7\" lon=\"8.6\">"))
         #expect(writer.document(for: sample, createdAt: t0).contains("<name>WPT</name>"))
@@ -103,12 +103,12 @@ struct GPXWriterTests {
 
     // MARK: Times
 
-    /// Scenario "Ganze Sekunden".
+    /// Scenario "Whole seconds".
     @Test func wholeSecondsHaveNoFraction() {
         #expect(GPXText.time(t0) == "2026-11-02T14:30:05Z")
     }
 
-    /// Scenario "Millisekunden".
+    /// Scenario "Milliseconds".
     @Test func millisecondsAreWritten() {
         #expect(GPXText.time(t0.addingTimeInterval(0.25)) == "2026-11-02T14:30:05.250Z")
     }
@@ -119,7 +119,7 @@ struct GPXWriterTests {
 
     // MARK: Numbers
 
-    /// Scenario "Deutsches Gebietsschema": numbers never use the locale.
+    /// Scenario "German locale": numbers never use the locale.
     @Test func numbersIgnoreLocale() {
         // Proof that a German locale would produce a comma ...
         #expect(String(format: "%.1f", locale: Locale(identifier: "de_DE"), 1.5) == "1,5")
@@ -135,7 +135,7 @@ struct GPXWriterTests {
     // MARK: Escaping
 
 #if os(macOS) // XMLDocument is not available on iOS
-    /// Scenario "Name mit Sonderzeichen".
+    /// Scenario "Name with special characters".
     @Test func specialCharactersRoundTrip() throws {
         let document = try XMLDocument(data: writer.data(for: sample, createdAt: t0))
         let names = try document.nodes(forXPath: "//*[local-name()='trk']/*[local-name()='name']")
@@ -151,7 +151,7 @@ struct GPXWriterTests {
 
     // MARK: Determinism and writing (task 4.3)
 
-    /// Scenario "Zweimal exportieren".
+    /// Scenario "Export twice".
     @Test func outputIsDeterministic() {
         #expect(writer.data(for: sample, createdAt: t0) == writer.data(for: sample, createdAt: t0))
     }
@@ -165,7 +165,7 @@ struct GPXWriterTests {
         #expect(try Data(contentsOf: url) == writer.data(for: sample, createdAt: t0))
     }
 
-    /// Scenario "Ziel nicht beschreibbar".
+    /// Scenario "Destination not writable".
     @Test func readOnlyDirectoryFailsWithoutLeavingAFile() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

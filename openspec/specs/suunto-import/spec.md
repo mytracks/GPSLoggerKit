@@ -1,67 +1,67 @@
 # suunto-import Specification
 
 ## Purpose
-Liest Aufzeichnungen der Suunto-Ambit-Uhren im SML-Format ein, wie sie Moveslink und Movescount als `.sml` oder `.xml` speichern. Daraus entstehen Tracks, ohne gpsbabel und ohne Python.
+Reads recordings of the Suunto Ambit watches in the SML format as Moveslink and Movescount store them as `.sml` or `.xml`. They become tracks, without gpsbabel and without Python.
 
 ## Requirements
 
-### Requirement: Proben
-Der Import SHALL die Elemente `Sample` unter `sml/DeviceLog/Samples` lesen. Jede Probe mit `Latitude` und `Longitude` SHALL einen Trackpunkt ergeben, unabhängig von ihrem `SampleType`, etwa `gps-base` oder `gps-small`. Proben ohne Position SHALL keine Punkte ergeben.
+### Requirement: Samples
+The import SHALL read the elements `Sample` below `sml/DeviceLog/Samples`. Every sample with `Latitude` and `Longitude` SHALL result in a track point, independent of its `SampleType`, for example `gps-base` or `gps-small`. Samples without a position SHALL NOT result in points.
 
-#### Scenario: Periodische Probe
-- **WHEN** eine Probe vom Typ `periodic` nur Höhe, Temperatur und Luftdruck enthält
-- **THEN** entsteht daraus kein Punkt
+#### Scenario: Periodic sample
+- **WHEN** a sample of the type `periodic` contains only altitude, temperature and air pressure
+- **THEN** no point results from it
 
-### Requirement: Werte der Punkte
-Der Import SHALL folgende Werte übernehmen:
-- **Position:** `Latitude` und `Longitude` im Bogenmaß, umgerechnet in Grad.
-- **Zeit:** `UTC` (XML-Schema `dateTime`).
-- **Bewegung:** `GPSSpeed` in m/s und `GPSHeading` im Bogenmaß, umgerechnet in Grad.
-- **Qualität:** `GpsHDOP` als HDOP, `NumberOfSatellites` als Satellitenzahl.
+### Requirement: Values of the points
+The import SHALL take over the following values:
+- **Position:** `Latitude` and `Longitude` in radians, converted to degrees.
+- **Time:** `UTC` (XML Schema `dateTime`).
+- **Movement:** `GPSSpeed` in m/s and `GPSHeading` in radians, converted to degrees.
+- **Quality:** `GpsHDOP` as HDOP, `NumberOfSatellites` as number of satellites.
 
-#### Scenario: GPS-Probe umrechnen
-- **WHEN** eine Probe `Latitude` 0.8726646259971648, `Longitude` 0.17453292519943295, `UTC` `2026-05-01T08:00:00Z`, `GPSHeading` 3.141592653589793 und `NumberOfSatellites` 12 enthält
-- **THEN** entsteht ein Punkt bei 50° Nord und 10° Ost, mit dieser Zeit, dem Kurs 180° und 12 Satelliten
+#### Scenario: Convert a GPS sample
+- **WHEN** a sample contains `Latitude` 0.8726646259971648, `Longitude` 0.17453292519943295, `UTC` `2026-05-01T08:00:00Z`, `GPSHeading` 3.141592653589793 and `NumberOfSatellites` 12
+- **THEN** a point at 50° north and 10° east results, with this time, the course 180° and 12 satellites
 
-### Requirement: Fehlerhafte Proben
-Eine Position außerhalb des gültigen Bereichs oder eine nicht lesbare Zahl MUST verworfen und als Warnung gezählt werden. Fehlt eine lesbare `UTC`-Zeit, SHALL der Punkt ohne Zeit übernommen und als Warnung gezählt werden.
+### Requirement: Faulty samples
+A position outside the valid range or an unreadable number MUST be discarded and counted as a warning. If a readable `UTC` time is missing, the point SHALL be taken over without a time and counted as a warning.
 
-#### Scenario: Ungültige Breite
-- **WHEN** eine Probe die `Latitude` 2.0 hat (mehr als π/2)
-- **THEN** wird sie verworfen, und eine Warnung zählt sie
+#### Scenario: Invalid latitude
+- **WHEN** a sample has the `Latitude` 2.0 (more than π/2)
+- **THEN** it is discarded, and a warning counts it
 
-### Requirement: Höhe
-Liegt die letzte periodische Probe mit `Altitude` höchstens 60 Sekunden (nach `UTC`) vor dem Punkt, SHALL ihr Wert als Höhe des Punkts gelten (barometrische Höhe). Mehrere Punkte können dieselbe periodische Probe nutzen. Andernfalls SHALL `GPSAltitude` der Probe verwendet werden, sonst keine Höhe.
+### Requirement: Elevation
+If the last periodic sample with `Altitude` lies at most 60 seconds (by `UTC`) before the point, its value SHALL count as the elevation of the point (barometric altitude). Several points can use the same periodic sample. Otherwise `GPSAltitude` of the sample SHALL be used, else no elevation.
 
-#### Scenario: Barometrische Höhe
-- **WHEN** einer GPS-Probe mit `GPSAltitude` 130 zehn Sekunden vorher eine periodische Probe mit `Altitude` 118 vorausgeht
-- **THEN** hat der Punkt die Höhe 118 m
+#### Scenario: Barometric altitude
+- **WHEN** a GPS sample with `GPSAltitude` 130 is preceded ten seconds earlier by a periodic sample with `Altitude` 118
+- **THEN** the point has the elevation 118 m
 
-#### Scenario: Nur GPS-Höhe
-- **WHEN** vor einer GPS-Probe mit `GPSAltitude` 130 keine periodische Probe innerhalb von 60 Sekunden liegt
-- **THEN** hat der Punkt die Höhe 130 m
+#### Scenario: GPS altitude only
+- **WHEN** no periodic sample lies within 60 seconds before a GPS sample with `GPSAltitude` 130
+- **THEN** the point has the elevation 130 m
 
-### Requirement: Track und Pausen
-Jede Datei SHALL einen Track mit dem Dateinamen ohne Endung ergeben. Ein Ereignis `Pause` mit `State` `True` SHALL das laufende Segment beenden. Punkte nach einem `Pause`-Ereignis mit `State` `False` SHALL in ein neues Segment kommen. Segmente ohne Punkte SHALL entfallen.
+### Requirement: Track and pauses
+Every file SHALL result in one track named after the file name without extension. An event `Pause` with `State` `True` SHALL end the current segment. Points after a `Pause` event with `State` `False` SHALL go into a new segment. Segments without points SHALL be dropped.
 
-#### Scenario: Aufzeichnung mit Pause
-- **WHEN** eine Datei 20 GPS-Proben enthält, dann eine Pause (`State` `True`), ein Weiter (`State` `False`) und 10 weitere GPS-Proben
-- **THEN** hat der Track zwei Segmente mit 20 und 10 Punkten
+#### Scenario: Recording with a pause
+- **WHEN** a file contains 20 GPS samples, then a pause (`State` `True`), a resume (`State` `False`) and 10 more GPS samples
+- **THEN** the track has two segments with 20 and 10 points
 
-#### Scenario: Startereignis
-- **WHEN** die erste Probe der Datei ein `Pause`-Ereignis mit `State` `False` enthält
-- **THEN** entsteht dadurch kein leeres Segment
+#### Scenario: Start event
+- **WHEN** the first sample of the file contains a `Pause` event with `State` `False`
+- **THEN** no empty segment results from it
 
-### Requirement: Fehler
-Eine Datei, die kein wohlgeformtes XML ist, MUST zu einem Fehler mit Datei und Zeile führen. Kopfdaten (`Header`, `Device`) SHALL ignoriert werden.
+### Requirement: Errors
+A file that is not well-formed XML MUST lead to an error with file and line. Header data (`Header`, `Device`) SHALL be ignored.
 
-#### Scenario: Abgeschnittene Datei
-- **WHEN** eine SML-Datei mitten in einer Probe endet
-- **THEN** endet das Einlesen mit einem Fehler, der Datei und Zeile nennt
+#### Scenario: Truncated file
+- **WHEN** an SML file ends in the middle of a sample
+- **THEN** reading ends with an error that names file and line
 
-### Requirement: Erkennung
-Eine Datei SHALL als Suunto SML erkannt werden, wenn ihr erstes Element `sml` ist, mit oder ohne Namensraum-Präfix. Die Dateiendungen `.sml` und `.xml` SHALL nur als Hinweis dienen.
+### Requirement: Detection
+A file SHALL be recognized as Suunto SML if its first element is `sml`, with or without a namespace prefix. The file extensions `.sml` and `.xml` SHALL only serve as a hint.
 
-#### Scenario: SML mit Endung .xml
-- **WHEN** eine SML-Datei die Endung `.xml` hat
-- **THEN** schlägt die Erkennung Suunto SML vor und nicht GPX
+#### Scenario: SML with extension .xml
+- **WHEN** an SML file has the extension `.xml`
+- **THEN** the detection suggests Suunto SML and not GPX

@@ -1,59 +1,59 @@
 # gpx-import Specification
 
 ## Purpose
-Liest GPX-Dateien ein, wie sie Garmin-Geräte und andere Logger auf ihrem Speicher ablegen. Tracks und Wegpunkte gelangen so ins gemeinsame Datenmodell und lassen sich normalisiert wieder als GPX 1.1 ausgeben.
+Reads GPX files as Garmin devices and other loggers store them in their memory. Tracks and waypoints enter the common data model this way and can be written again, normalized, as GPX 1.1.
 
 ## Requirements
 
-### Requirement: GPX-Versionen
-Der Import SHALL GPX 1.0 (`http://www.topografix.com/GPX/1/0`) und GPX 1.1 (`http://www.topografix.com/GPX/1/1`) lesen. Dateien ohne oder mit unbekanntem Namensraum SHALL er lesen, solange das Wurzelelement `gpx` heißt.
+### Requirement: GPX versions
+The import SHALL read GPX 1.0 (`http://www.topografix.com/GPX/1/0`) and GPX 1.1 (`http://www.topografix.com/GPX/1/1`). It SHALL read files without a namespace or with an unknown one, as long as the root element is called `gpx`.
 
-#### Scenario: GPX 1.0 eines älteren Garmin-Geräts
-- **WHEN** eine GPX-1.0-Datei mit einem Track eingelesen wird
-- **THEN** enthält die Aufzeichnung diesen Track mit allen Punkten
+#### Scenario: GPX 1.0 of an older Garmin device
+- **WHEN** a GPX 1.0 file with one track is read
+- **THEN** the recording contains this track with all points
 
-#### Scenario: Ohne Namensraum
-- **WHEN** das Wurzelelement `<gpx>` keinen Namensraum hat
-- **THEN** wird die Datei trotzdem eingelesen
+#### Scenario: Without namespace
+- **WHEN** the root element `<gpx>` has no namespace
+- **THEN** the file is read anyway
 
-### Requirement: Tracks und Wegpunkte
-Jedes `trk` SHALL mit seinem Namen als Track übernommen werden, jedes `trkseg` als Segment. Jedes `wpt` SHALL als Wegpunkt mit Name und Kommentar übernommen werden. Routen (`rte`) SHALL der Import nicht übernehmen.
+### Requirement: Tracks and waypoints
+Every `trk` SHALL be taken over as a track with its name, every `trkseg` as a segment. Every `wpt` SHALL be taken over as a waypoint with name and comment. The import SHALL NOT take over routes (`rte`).
 
-#### Scenario: Garmin-Datei mit Tracks, Wegpunkten und Route
-- **WHEN** eine Datei zwei Tracks, fünf Wegpunkte und eine Route enthält
-- **THEN** enthält die Aufzeichnung zwei Tracks und fünf Wegpunkte, aber keine Route
+#### Scenario: Garmin file with tracks, waypoints and route
+- **WHEN** a file contains two tracks, five waypoints and one route
+- **THEN** the recording contains two tracks and five waypoints, but no route
 
-### Requirement: Punktangaben
-Der Import SHALL für jeden Punkt folgende Angaben übernehmen, soweit vorhanden: `lat`, `lon`, `ele`, `time`, `sat`, `hdop`, `vdop`, `pdop` und `fix`. Bei GPX 1.0 SHALL er zusätzlich `speed` und `course` übernehmen. Erweiterungen (`extensions`) und unbekannte Elemente SHALL er ohne Warnung ignorieren.
+### Requirement: Point data
+For every point the import SHALL take over the following data where present: `lat`, `lon`, `ele`, `time`, `sat`, `hdop`, `vdop`, `pdop` and `fix`. For GPX 1.0 it SHALL additionally take over `speed` and `course`. It SHALL ignore extensions (`extensions`) and unknown elements without a warning.
 
-#### Scenario: Garmin-Erweiterungen
-- **WHEN** Trackpunkte `gpxtpx:TrackPointExtension` mit Puls enthalten
-- **THEN** werden die Punkte ohne diese Angaben und ohne Warnung übernommen
+#### Scenario: Garmin extensions
+- **WHEN** track points contain `gpxtpx:TrackPointExtension` with heart rate
+- **THEN** the points are taken over without these data and without a warning
 
-### Requirement: Zeitangaben
-Zeiten SHALL nach ISO 8601 mit Zeitzonenangabe gelesen werden, also `Z` oder `±hh:mm`, mit oder ohne Bruchteil von Sekunden. Daraus entsteht ein absoluter Zeitpunkt. Zeiten ohne Zonenangabe SHALL als UTC gelten.
+### Requirement: Times
+Times SHALL be read according to ISO 8601 with a time zone, that is `Z` or `±hh:mm`, with or without fractions of seconds. The result is an absolute point in time. Times without a zone SHALL count as UTC.
 
-#### Scenario: Zeit mit Zonenversatz
-- **WHEN** ein Punkt die Zeit `2026-11-02T15:30:05+01:00` hat
-- **THEN** ist sein Zeitpunkt 2. November 2026, 14:30:05 UTC
+#### Scenario: Time with zone offset
+- **WHEN** a point has the time `2026-11-02T15:30:05+01:00`
+- **THEN** its point in time is 2 November 2026, 14:30:05 UTC
 
-### Requirement: Ungültige Punkte
-Punkte ohne oder mit nicht lesbarer Breite oder Länge, mit Breite außerhalb von ±90° oder mit Länge außerhalb von ±180° MUST übersprungen und als Warnung gezählt werden.
+### Requirement: Invalid points
+Points without or with an unreadable latitude or longitude, with a latitude outside ±90° or with a longitude outside ±180° MUST be skipped and counted as a warning.
 
-#### Scenario: Punkt außerhalb des Wertebereichs
-- **WHEN** ein `trkpt` die Breite 123.4 hat
-- **THEN** fehlt dieser Punkt in der Aufzeichnung, und eine Warnung zählt ihn
+#### Scenario: Point out of range
+- **WHEN** a `trkpt` has the latitude 123.4
+- **THEN** this point is missing in the recording, and a warning counts it
 
-### Requirement: Nicht wohlgeformte Dateien
-Ist eine Datei kein wohlgeformtes XML, MUST der Import mit einem Fehler enden, der Datei und Zeile nennt. Bis dahin gelesene Punkte SHALL er nicht als Teilergebnis zurückgeben.
+### Requirement: Files that are not well-formed
+If a file is not well-formed XML, the import MUST end with an error that names file and line. It SHALL NOT return the points read until then as a partial result.
 
-#### Scenario: Abgeschnittene Datei
-- **WHEN** eine GPX-Datei mitten in einem `trkpt` endet
-- **THEN** endet der Import mit einem Fehler, der Datei und Zeile nennt
+#### Scenario: Truncated file
+- **WHEN** a GPX file ends in the middle of a `trkpt`
+- **THEN** the import ends with an error that names file and line
 
-### Requirement: Erkennung
-Die Formaterkennung SHALL eine Datei als GPX erkennen, wenn ihr erstes Element `gpx` heißt.
+### Requirement: Detection
+The format detection SHALL recognize a file as GPX if its first element is called `gpx`.
 
-#### Scenario: GPX mit Endung `.xml`
-- **WHEN** eine GPX-Datei die Endung `.xml` hat
-- **THEN** schlägt die Erkennung GPX vor
+#### Scenario: GPX with extension `.xml`
+- **WHEN** a GPX file has the extension `.xml`
+- **THEN** the detection suggests GPX

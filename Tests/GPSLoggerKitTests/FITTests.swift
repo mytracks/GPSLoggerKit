@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import GPSLoggerKit
 
-/// FIT time 1_100_000_000 = 2024-11-08 11:33:20 UTC (scenario "Punkt umrechnen").
+/// FIT time 1_100_000_000 = 2024-11-08 11:33:20 UTC (scenario "Convert a point").
 private let t0: UInt32 = 1_100_000_000
 
 private func input(_ file: FITTestFile, name: String = "ride.fit") -> FileInput {
@@ -55,7 +55,7 @@ struct FITChecksumTests {
 
 @Suite("FIT – file structure")
 struct FITStructureTests {
-    /// Scenario "Punkt umrechnen".
+    /// Scenario "Convert a point".
     @Test func recordIsConverted() throws {
         var file = FITTestFile()
         file.defineRecords()
@@ -70,7 +70,7 @@ struct FITStructureTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Big-Endian-Definition".
+    /// Scenario "Big-endian definition".
     @Test func bigEndianDefinitionGivesTheSamePoints() throws {
         let little = points(try decode(activity(5)))
         let big = points(try decode(activity(5, bigEndian: true)))
@@ -78,7 +78,7 @@ struct FITStructureTests {
         #expect(big == little)
     }
 
-    /// Scenario "Entwicklerfelder".
+    /// Scenario "Developer fields".
     @Test func developerFieldsAreSkipped() throws {
         var file = FITTestFile()
         file.define(local: 0, global: FITTestFile.record, fields: FITTestFile.recordFields, developerFieldSizes: [3, 1])
@@ -93,7 +93,7 @@ struct FITStructureTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Komprimierter Zeitstempel", including the wrap of the 5-bit offset.
+    /// Scenario "Compressed timestamp", including the wrap of the 5-bit offset.
     @Test(arguments: [t0, t0 | 0x1E])
     func compressedTimestampFollowsTheLastTimestamp(start: UInt32) throws {
         var file = FITTestFile()
@@ -108,7 +108,7 @@ struct FITStructureTests {
         #expect(times[1] == first.addingTimeInterval(3))
     }
 
-    /// Scenario "Verkettete Dateien".
+    /// Scenario "Chained files".
     @Test func chainedFilesAreAllRead() throws {
         let bytes = activity(4).bytes() + activity(6).bytes()
         let result = try decode(bytes)
@@ -140,7 +140,7 @@ struct FITStructureTests {
 
 @Suite("FIT – damaged files")
 struct FITDamageTests {
-    /// Scenario "Abgeschnittene Aktivität".
+    /// Scenario "Truncated activity".
     @Test func truncatedActivityKeepsTheBeginning() throws {
         var bytes = activity(100).bytes()
         // Header (14) + definition (6 + 5 * 3 = 21); each record is 1 + 16 bytes. Cut inside record 61.
@@ -152,7 +152,7 @@ struct FITDamageTests {
         #expect(result.warnings[0].message(localization: "de").contains("ride.fit"))
     }
 
-    /// Scenario "Unvollständige Binärdatei" (spec logger-kit): only the CRC is missing.
+    /// Scenario "Incomplete binary file" (spec logger-kit): only the CRC is missing.
     @Test func missingFileCRCIsTruncation() throws {
         let bytes = activity(10).bytes().dropLast(2)
         let result = try decode(Array(bytes))
@@ -160,7 +160,7 @@ struct FITDamageTests {
         #expect(kinds(result) == [.truncatedFile])
     }
 
-    /// Scenario "Undefinierte Nachrichtenart".
+    /// Scenario "Undefined message type".
     @Test func undefinedLocalTypeStopsDecoding() throws {
         var file = activity(10)
         file.appendRaw([0x05, 1, 2, 3])
@@ -169,7 +169,7 @@ struct FITDamageTests {
         #expect(kinds(result) == [.malformedRecord])
     }
 
-    /// Scenario "Falsche Prüfsumme".
+    /// Scenario "Wrong checksum".
     @Test func wrongFileChecksumIsAWarning() throws {
         var bytes = activity(20).bytes()
         bytes[bytes.count - 1] ^= 0xFF
@@ -188,7 +188,7 @@ struct FITDamageTests {
         #expect(result.warnings[0].count == 2)
     }
 
-    /// Scenario "Ungültiger Kopf".
+    /// Scenario "Invalid header".
     @Test func invalidHeaderIsAnError() {
         let bytes = activity(3).bytes(headerSizeByte: 20)
         #expect {
@@ -210,7 +210,7 @@ struct FITDamageTests {
 
 @Suite("FIT – tracks, segments and courses")
 struct FITTrackTests {
-    /// Scenario "Erweiterte Höhe".
+    /// Scenario "Enhanced altitude".
     @Test func enhancedAltitudeAndSpeedWin() throws {
         var file = FITTestFile()
         file.define(local: 0, global: FITTestFile.record, fields: [
@@ -223,7 +223,7 @@ struct FITTrackTests {
         #expect(point.quality.speed == 4)
     }
 
-    /// Scenario "Nur Herzfrequenz".
+    /// Scenario "Heart rate only".
     @Test func recordWithoutPositionIsSkippedSilently() throws {
         var file = activity(2)
         file.define(local: 2, global: FITTestFile.record, fields: [(253, .uint32(0)), (3, .uint8(0))])
@@ -233,7 +233,7 @@ struct FITTrackTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Relative Gerätezeit".
+    /// Scenario "Relative device time".
     @Test func relativeDeviceTimeHasNoDate() throws {
         var file = FITTestFile()
         file.defineRecords()
@@ -244,7 +244,7 @@ struct FITTrackTests {
         #expect(result.warnings == [ImportWarning(kind: .missingDate, count: 2, fileName: "ride.fit", firstLine: 2)])
     }
 
-    /// Scenario "Pause in einer Aktivität".
+    /// Scenario "Pause in an activity".
     @Test func timerStopAndStartSplitSegments() throws {
         var file = FITTestFile()
         file.defineRecords()
@@ -272,7 +272,7 @@ struct FITTrackTests {
         #expect(track.segments.map(\.points.count) == [3, 2])
     }
 
-    /// Scenarios "Kursdatei" and "Kurspunkt".
+    /// Scenarios "Course file" and "Course point".
     @Test func courseNameAndCoursePoints() throws {
         var file = activity(5)
         file.define(local: 3, global: FITTestFile.course, fields: [(5, .string("", size: 16))])
@@ -291,7 +291,7 @@ struct FITTrackTests {
         #expect(waypoint.time == Date(timeIntervalSince1970: TimeInterval(t0 + 2) + 631_065_600))
     }
 
-    /// Scenario "Zwei Dateien".
+    /// Scenario "Two files".
     @Test func twoFilesGiveTwoTracksInOrder() throws {
         let result = try FileFormats.readSynchronously([input(activity(3), name: "b.fit"), input(activity(2), name: "a.fit")],
                                                        format: FITFileFormat(),
@@ -338,13 +338,13 @@ struct FITEncoderTests {
 
 @Suite("FIT – detection")
 struct FITDetectionTests {
-    /// Scenario "Endung fehlt".
+    /// Scenario "Extension missing".
     @Test func detectedWithoutExtension() {
         #expect(FileFormats.detect(prefix: Data(activity(2).bytes()), fileName: "ride")?.id == .fit)
         #expect(FileFormats.detect(prefix: Data(activity(2).bytes()), fileName: "ride.gpx")?.id == .fit)
     }
 
-    /// Scenario "Andere Binärdatei".
+    /// Scenario "Other binary file".
     @Test func otherBinaryIsNotFIT() {
         var bytes = activity(2).bytes()
         bytes[9] = 0x58

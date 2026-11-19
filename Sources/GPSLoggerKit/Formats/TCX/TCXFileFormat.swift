@@ -75,7 +75,7 @@ private final class TCXParserHandler: NSObject, XMLParserDelegate {
         var notes: String?
     }
 
-    /// Subtrees that are not evaluated (spec "Nicht ausgewertete Inhalte").
+    /// Subtrees that are not evaluated (spec "Content not evaluated").
     private static let ignored: Set<String> = ["Workouts", "MultiSportSession", "Folders", "Author", "Creator"]
     /// Leaf elements whose text is collected.
     private static let textElements: Set<String> = [

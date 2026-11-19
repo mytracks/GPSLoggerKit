@@ -18,7 +18,7 @@ private func fixture(_ name: String) throws -> FileInput {
 
 @Suite("ISO 8601")
 struct ISO8601Tests {
-    /// Scenario "Zeit mit Zonenversatz".
+    /// Scenario "Time with zone offset".
     @Test func zoneOffset() {
         #expect(ISO8601.date("2026-11-02T15:30:05+01:00") == utc(2026, 11, 2, 14, 30, 5))
         #expect(ISO8601.date("2026-11-02T09:30:05-05:00") == utc(2026, 11, 2, 14, 30, 5))
@@ -59,7 +59,7 @@ struct ISO8601Tests {
 
 @Suite("GPX import")
 struct GPXImportTests {
-    /// Scenario "GPX 1.0 eines älteren Garmin-Geräts".
+    /// Scenario "GPX 1.0 of an older Garmin device".
     @Test func gpx10() throws {
         let result = try FileFormats.readSynchronously([try fixture("garmin-gpx10.gpx")], format: GPXFileFormat(),
                                                        options: ImportOptions(correctWeekRollover: false))
@@ -75,7 +75,7 @@ struct GPXImportTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Ohne Namensraum".
+    /// Scenario "Without namespace".
     @Test func withoutNamespace() throws {
         let result = try read("<gpx><trk><trkseg><trkpt lat=\"1\" lon=\"2\"/><trkpt lat=\"3\" lon=\"4\"/></trkseg></trk></gpx>")
         #expect(result.recording.trackPointCount == 2)
@@ -88,7 +88,7 @@ struct GPXImportTests {
         #expect(try read(text).recording.waypoints.first?.name == "A")
     }
 
-    /// Scenarios "Garmin-Datei mit Tracks, Wegpunkten und Route" and "Garmin-Erweiterungen".
+    /// Scenarios "Garmin file with tracks, waypoints and route" and "Garmin extensions".
     @Test func garminFileWithTracksWaypointsRouteAndExtensions() throws {
         let result = try FileFormats.readSynchronously([try fixture("garmin-oregon.gpx")], format: GPXFileFormat(),
                                                        options: ImportOptions(correctWeekRollover: false))
@@ -112,7 +112,7 @@ struct GPXImportTests {
         #expect(result.recording.tracks[0].segments.count == 1)
     }
 
-    /// Scenario "Punkt außerhalb des Wertebereichs".
+    /// Scenario "Point out of range".
     @Test func invalidCoordinatesAreSkipped() throws {
         let text = """
         <gpx>
@@ -136,7 +136,7 @@ struct GPXImportTests {
         #expect(waypoint.elevation == nil && waypoint.time == nil && waypoint.quality.fix == nil)
     }
 
-    /// Scenario "Abgeschnittene Datei".
+    /// Scenario "Truncated file".
     @Test func truncatedFileIsAnErrorWithLine() throws {
         let text = "<?xml version=\"1.0\"?>\n<gpx>\n<trk><trkseg>\n<trkpt lat=\"1\" lon=\"2\">\n<ele>3</ele>\n<trkpt lat=\"1\" lo"
         #expect {
@@ -162,7 +162,7 @@ struct GPXImportTests {
         #expect(Set(format?.fileExtensions ?? []) == ["gpx", "xml"])
     }
 
-    /// Scenario "GPX mit Endung `.xml`".
+    /// Scenario "GPX with extension `.xml`".
     @Test func detection() throws {
         let gpx = try fixture("garmin-oregon.gpx")
         #expect(FileFormats.detect(prefix: gpx.data, fileName: "export.xml")?.id == .gpx)

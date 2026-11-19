@@ -58,7 +58,7 @@ struct KMZTests {
     }
     #endif
 
-    /// Scenario "Archiv mit Bildern".
+    /// Scenario "Archive with images".
     @Test func archiveWithImages() throws {
         var archive = KMZTestFile()
         archive.entries = [
@@ -71,7 +71,7 @@ struct KMZTests {
         #expect(result.warnings.map(\.kind) == [.missingTimes])
     }
 
-    /// Scenario "Anderer Dateiname"; `doc.kml` in a subfolder does not count.
+    /// Scenario "Other file name"; `doc.kml` in a subfolder does not count.
     @Test func otherDocumentName() throws {
         var archive = KMZTestFile()
         archive.entries = [KMZTestFile.Entry("tour.kml", pathKML(name: "Tour"))]
@@ -95,7 +95,7 @@ struct KMZTests {
         }
     }
 
-    /// Scenario "Falsche Prüfsumme".
+    /// Scenario "Wrong checksum".
     @Test func wrongChecksumIsAWarning() throws {
         var entry = KMZTestFile.Entry("doc.kml", pathKML())
         entry.wrongCRC = true
@@ -104,13 +104,13 @@ struct KMZTests {
         #expect(result.warnings.contains(ImportWarning(kind: .fileChecksumMismatch, count: 1, fileName: "tour.kmz")))
     }
 
-    /// Scenario "Kein KML im Archiv".
+    /// Scenario "No KML in the archive".
     @Test func archiveWithoutKML() {
         let archive = KMZTestFile(entries: [KMZTestFile.Entry("files/a.jpg", bytes: image)])
         #expect(failsNamingTheFile(archive) { $0 == .noUsableData })
     }
 
-    /// Scenario "Abgeschnittenes Archiv".
+    /// Scenario "Truncated archive".
     @Test func truncatedArchive() throws {
         let bytes = KMZTestFile(entries: [KMZTestFile.Entry("doc.kml", pathKML())]).bytes()
         let half = Data(bytes.prefix(bytes.count / 2))

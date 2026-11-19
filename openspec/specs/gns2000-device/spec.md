@@ -1,68 +1,68 @@
 # gns2000-device Specification
 
 ## Purpose
-Liest den Track des Bluetooth-Loggers GNS 2000 (auch GNS 2000 plus) aus und löscht seinen Speicher, clean-room in GPSLoggerKit nach dem eigenen myTracks-Treiber des Entwicklers.
+Reads the track of the Bluetooth logger GNS 2000 (also GNS 2000 plus) and erases its memory, clean-room in GPSLoggerKit after the developer's own myTracks driver.
 
 ## Requirements
 
-### Requirement: GNS-2000-Sätze
-Der Treiber SHALL Befehle als `$<Inhalt>*<xx>` mit CR LF senden, wobei `xx` das XOR aller Zeichen des Inhalts als zwei Hex-Ziffern in Kleinbuchstaben ist. Er SHALL CR-LF-Zeilen lesen. Zeilen mit fehlender oder falscher Prüfsumme MUST er ignorieren; die Prüfsumme gilt ohne Rücksicht auf Groß- und Kleinschreibung.
+### Requirement: GNS 2000 sentences
+The driver SHALL send commands as `$<content>*<xx>` with CR LF, where `xx` is the XOR of all characters of the content as two lowercase hex digits. It SHALL read CR LF lines. It MUST ignore lines with a missing or wrong checksum; the checksum is compared case-insensitively.
 
-#### Scenario: Prüfsumme eines Befehls
-- **WHEN** der Treiber den Lesebefehl sendet
-- **THEN** sendet er `$PGNS,R*` mit dem XOR von `PGNS,R` als zwei Hex-Ziffern in Kleinbuchstaben und CR LF
+#### Scenario: Checksum of a command
+- **WHEN** the driver sends the read command
+- **THEN** it sends `$PGNS,R*` with the XOR of `PGNS,R` as two lowercase hex digits and CR LF
 
-#### Scenario: Gestörte Zeile
-- **WHEN** eine `$PMTKLOX`-Zeile eine falsche Prüfsumme hat
-- **THEN** wertet der Treiber sie nicht aus und liest weiter
+#### Scenario: Garbled line
+- **WHEN** a `$PMTKLOX` line has a wrong checksum
+- **THEN** the driver does not evaluate it and continues reading
 
-### Requirement: Bereitschaft des Geräts
-Nach dem Öffnen der Verbindung SHALL der Treiber auf die erste Zeile warten, die mit `$` beginnt, weil das Gerät laufend NMEA-Sätze sendet. Erst danach SHALL er seinen Befehl senden. Kommt innerhalb von 10 Sekunden keine solche Zeile, MUST der Vorgang mit einer Zeitüberschreitung enden.
+### Requirement: Device readiness
+After opening the connection the driver SHALL wait for the first line that starts with `$`, because the device sends NMEA sentences continuously. Only then SHALL it send its command. If no such line arrives within 10 seconds, the operation MUST end with a timeout.
 
-#### Scenario: Gerät sendet NMEA
-- **WHEN** das Gerät nach dem Öffnen `$GPGGA,…` sendet
-- **THEN** sendet der Treiber danach seinen Befehl
+#### Scenario: Device sends NMEA
+- **WHEN** the device sends `$GPGGA,…` after opening
+- **THEN** the driver sends its command afterwards
 
-#### Scenario: Gerät stumm
-- **WHEN** das Gerät nach dem Öffnen 10 Sekunden lang nichts sendet
-- **THEN** endet der Vorgang mit einer Zeitüberschreitung
+#### Scenario: Device silent
+- **WHEN** the device sends nothing for 10 seconds after opening
+- **THEN** the operation ends with a timeout
 
-### Requirement: Speicher lesen
-Der Treiber SHALL `PGNS,R` senden und auf `$PMTKLOX,0,<Anzahl>` warten. Danach SHALL er `$PMTKLOX,1,<Index>,<Wörter…>` bis `$PMTKLOX,2` lesen und den Fortschritt als gelesene von angekündigten Paketen melden. Je vier Wörter aus 8 Hex-Ziffern bilden in Textreihenfolge einen 16-Byte-Datensatz. Vergehen zwischen zwei Zeilen 10 Sekunden ohne Daten, MUST der Vorgang mit einer Zeitüberschreitung enden.
+### Requirement: Read the memory
+The driver SHALL send `PGNS,R` and wait for `$PMTKLOX,0,<count>`. Then it SHALL read `$PMTKLOX,1,<index>,<words…>` up to `$PMTKLOX,2` and report the progress as read of announced packets. Every four words of 8 hex digits form a 16-byte record in text order. If 10 seconds pass between two lines without data, the operation MUST end with a timeout.
 
-#### Scenario: Auslesen
-- **WHEN** das Gerät 3 Pakete mit zusammen 40 Datensätzen ankündigt und sendet
-- **THEN** liefert der Treiber die gültigen Punkte daraus und meldet den Fortschritt von 0 bis 3 Paketen
+#### Scenario: Reading
+- **WHEN** the device announces and sends 3 packets with 40 records in total
+- **THEN** the driver returns the valid points from them and reports the progress from 0 to 3 packets
 
-#### Scenario: Ende fehlt
-- **WHEN** das Gerät nach dem letzten Datenpaket verstummt
-- **THEN** endet der Vorgang nach 10 Sekunden mit einer Zeitüberschreitung
+#### Scenario: End missing
+- **WHEN** the device falls silent after the last data packet
+- **THEN** the operation ends with a timeout after 10 seconds
 
-### Requirement: Datensätze
-Ein Datensatz SHALL im Little-Endian-Format den Unix-Zeitstempel (UInt32, UTC) an 0, den Fix-Typ (UInt8) an 4, Breite und Länge (Float32) an 5 und 9 und die Höhe in Metern (Int16) an 13 enthalten. Datensätze aus lauter `FF` und solche mit einem Fix-Typ außerhalb von 1 bis 4 MUST der Treiber verwerfen.
+### Requirement: Records
+A record SHALL contain in little-endian format the Unix timestamp (UInt32, UTC) at 0, the fix type (UInt8) at 4, latitude and longitude (Float32) at 5 and 9 and the elevation in meters (Int16) at 13. The driver MUST discard records consisting only of `FF` and those with a fix type outside 1 to 4.
 
-#### Scenario: Umrechnung
-- **WHEN** ein Datensatz den Zeitstempel 1793620800, Fix-Typ 3, Breite 50,5, Länge 8,25 und Höhe 123 enthält
-- **THEN** entsteht ein Punkt bei 50,5° N und 8,25° O, 123 m hoch, mit der Zeit 2026-11-02T12:00:00Z
+#### Scenario: Conversion
+- **WHEN** a record contains the timestamp 1793620800, fix type 3, latitude 50.5, longitude 8.25 and elevation 123
+- **THEN** a point at 50.5° N and 8.25° E results, 123 m high, with the time 2026-11-02T12:00:00Z
 
-#### Scenario: Ungültiger Fix
-- **WHEN** ein Datensatz den Fix-Typ 0 hat
-- **THEN** entsteht daraus kein Punkt
+#### Scenario: Invalid fix
+- **WHEN** a record has the fix type 0
+- **THEN** no point results from it
 
-### Requirement: Tracks des GNS 2000
-Ist der Zeitstempel eines Punkts kleiner als der des vorigen, SHALL der Treiber einen neuen Track beginnen. Jeder Track SHALL nach der Zeit seines ersten Punkts heißen, im Format `yyyy-MM-dd HH:mm` in UTC. Leere Tracks entfallen.
+### Requirement: Tracks of the GNS 2000
+If the timestamp of a point is smaller than that of the previous one, the driver SHALL start a new track. Every track SHALL be named after the time of its first point, in the format `yyyy-MM-dd HH:mm` in UTC. Empty tracks are dropped.
 
-#### Scenario: Zeit springt zurück
-- **WHEN** auf Punkte vom 2026-11-02 Punkte vom 2026-11-01 folgen
-- **THEN** entstehen zwei Tracks, „2026-11-02 12:00“ und „2026-11-01 08:00“
+#### Scenario: Time jumps back
+- **WHEN** points of 2026-11-02 are followed by points of 2026-11-01
+- **THEN** two tracks result, "2026-11-02 12:00" and "2026-11-01 08:00"
 
-### Requirement: Speicher des GNS 2000 löschen
-Der Treiber SHALL `PGNS,C` senden und auf `$PMTK001` warten. Nach jeweils mehr als 10 Zeilen in Folge, die nicht mit `$P` beginnen, SHALL er den Befehl erneut senden, höchstens fünfmal insgesamt. Kommt keine Bestätigung, MUST der Vorgang mit einem Protokollfehler enden.
+### Requirement: Erase the memory of the GNS 2000
+The driver SHALL send `PGNS,C` and wait for `$PMTK001`. After every run of more than 10 consecutive lines that do not start with `$P`, it SHALL send the command again, at most five times in total. If no confirmation arrives, the operation MUST end with a protocol error.
 
-#### Scenario: Löschen bestätigt
-- **WHEN** das Gerät nach `PGNS,C` mit `$PMTK001,…` antwortet
-- **THEN** endet das Löschen erfolgreich
+#### Scenario: Erasing confirmed
+- **WHEN** the device answers `PGNS,C` with `$PMTK001,…`
+- **THEN** erasing ends successfully
 
-#### Scenario: Gerät überhört den Befehl
-- **WHEN** das Gerät nach dem ersten `PGNS,C` nur NMEA-Sätze sendet
-- **THEN** sendet der Treiber den Befehl nach 11 solchen Zeilen erneut
+#### Scenario: Device misses the command
+- **WHEN** the device sends only NMEA sentences after the first `PGNS,C`
+- **THEN** the driver sends the command again after 11 such lines

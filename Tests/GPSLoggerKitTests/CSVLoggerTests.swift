@@ -39,13 +39,13 @@ struct CSVRecordsTests {
         return result
     }
 
-    /// Scenario "Felder mit Füllbytes".
+    /// Scenario "Fields with padding bytes".
     @Test func paddingIsTrimmed() {
         let result = records("a,100\0\0, b \t,\0\0\0\n")
         #expect(result.map(\.1) == [["a", "100", "b", ""]])
     }
 
-    /// Scenario "Leere Zeile am Ende".
+    /// Scenario "Empty line at the end".
     @Test func emptyAndPaddingLinesAreSkipped() {
         let result = records("H\r\n1\r\n\r\n\0\0\0,\0\0\r\n")
         #expect(result.map(\.0) == [1, 2])
@@ -78,7 +78,7 @@ struct CSVRecordsTests {
 
 @Suite("CSV loggers – V-900")
 struct V900Tests {
-    /// Scenario "Einfacher Modus".
+    /// Scenario "Simple mode".
     @Test func simpleMode() throws {
         let result = try read([csv("26110201.CSV", [v900SimpleHeader, v900Row(1)])], V900FileFormat())
         let point = try #require(result.recording.tracks.first?.segments.first?.points.first)
@@ -99,7 +99,7 @@ struct V900Tests {
         #expect(result.recording.trackPointCount == 1)
     }
 
-    /// Scenario "Südlich und westlich".
+    /// Scenario "South and west".
     @Test func southAndWest() throws {
         let result = try read([csv("a.csv", [v900SimpleHeader, v900Row(1, latitude: "50.000200S", longitude: "008.000100W")])],
                               V900FileFormat())
@@ -107,7 +107,7 @@ struct V900Tests {
         #expect(point.latitude == -50.0002 && point.longitude == -8.0001)
     }
 
-    /// Scenario "Professioneller Modus".
+    /// Scenario "Professional mode".
     @Test func professionalMode() throws {
         let row = [v900Field("1", 6), "T", "261102", "120000", v900Field("50.000000N", 10), v900Field("008.000000E", 11),
                    v900Field("100", 5), v900Field("5", 4), v900Field("45", 3), v900Field("3D", 4), v900Field("SPS", 5),
@@ -118,7 +118,7 @@ struct V900Tests {
         #expect(quality.pdop == 2.1 && quality.hdop == 1.2 && quality.vdop == 1.8)
     }
 
-    /// Scenario "Differentielles GPS".
+    /// Scenario "Differential GPS".
     @Test func differentialGPS() throws {
         let result = try read([csv("a.csv", [v900ProHeader, "1,T,261102,120000,50.0N,8.0E,100,5,45,2D,DGPS,0,0,0,"])],
                               V900FileFormat())
@@ -133,13 +133,13 @@ struct V900Tests {
         #expect(result.recording.tracks.first?.segments.first?.points.first?.quality.fix == .twoD)
     }
 
-    /// Scenario "Negative Höhe".
+    /// Scenario "Negative elevation".
     @Test func negativeHeight() throws {
         let result = try read([csv("a.csv", [v900SimpleHeader, v900Row(1, height: "-5")])], V900FileFormat())
         #expect(result.recording.tracks.first?.segments.first?.points.first?.elevation == -5)
     }
 
-    /// Scenario "Ungültige Hemisphäre".
+    /// Scenario "Invalid hemisphere".
     @Test func invalidHemisphere() throws {
         let result = try read([csv("a.csv", [v900SimpleHeader, v900Row(1), v900Row(2, latitude: "50.000000X")])],
                               V900FileFormat())
@@ -147,7 +147,7 @@ struct V900Tests {
         #expect(result.warnings == [ImportWarning(kind: .malformedRecord, count: 1, fileName: "a.csv", firstLine: 3)])
     }
 
-    /// Scenario "Breite außerhalb des Bereichs".
+    /// Scenario "Latitude out of range".
     @Test func latitudeOutOfRange() throws {
         let result = try read([csv("a.csv", [v900SimpleHeader, v900Row(1), v900Row(2, latitude: "95.000000N")])],
                               V900FileFormat())
@@ -162,14 +162,14 @@ struct V900Tests {
         #expect(result.warnings == [ImportWarning(kind: .malformedRecord, count: 2, fileName: "a.csv", firstLine: 3)])
     }
 
-    /// Scenario "Unbrauchbare Zeile".
+    /// Scenario "Unusable line".
     @Test func shortRow() throws {
         let result = try read([csv("a.csv", [v900SimpleHeader, "1,T,261102", v900Row(2)])], V900FileFormat())
         #expect(result.recording.trackPointCount == 1)
         #expect(result.warnings == [ImportWarning(kind: .malformedRecord, count: 1, fileName: "a.csv", firstLine: 2)])
     }
 
-    /// Scenarios "Markierung per Taste" and "Sprachaufnahme".
+    /// Scenarios "Marker by button" and "Voice recording".
     @Test func markersBecomeWaypoints() throws {
         let rows = [v900SimpleHeader, v900Row(1), v900Row(2, tag: "C", time: "120001", latitude: "50.000100N"),
                     v900Row(3, tag: "V", time: "120002", vox: "VOX00003"), v900Row(4, tag: "D", time: "120003"),
@@ -183,7 +183,7 @@ struct V900Tests {
         #expect(waypoints[0].elevation == 100)
     }
 
-    /// Scenario "Zwei Aufzeichnungen".
+    /// Scenario "Two recordings".
     @Test func oneTrackPerFile() throws {
         let result = try read([csv("26110201.CSV", [v900SimpleHeader, v900Row(1)]),
                                csv("26110202.CSV", [v900SimpleHeader, v900Row(1), v900Row(2)])], V900FileFormat())
@@ -223,7 +223,7 @@ let iBlueHeader = "INDEX,RCR,DATE,TIME,VALID,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT,S
 
 @Suite("CSV loggers – iBlue")
 struct IBlueCSVTests {
-    /// Scenario "Export eines iBlue 747".
+    /// Scenario "Export of an iBlue 747".
     @Test func iBlue747Export() throws {
         let result = try read([csv("log.csv", [iBlueHeader, "1,T,2026/11/02,12:00:00,3d,50.000000,N,8.000000,E,100,5.4,45"])],
                               IBlueCSVFileFormat())
@@ -238,14 +238,14 @@ struct IBlueCSVTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Datum eines iBlue 757".
+    /// Scenario "Date of an iBlue 757".
     @Test func iBlue757Date() throws {
         let result = try read([csv("a.csv", [iBlueHeader, "1,T,02/11/2026,12:00:00,3d,50.0,N,8.0,E,100,0,0"])],
                               IBlueCSVFileFormat())
         #expect(result.recording.tracks.first?.segments.first?.points.first?.time == date("2026-11-02T12:00:00Z"))
     }
 
-    /// Scenario "Andere Spaltenreihenfolge".
+    /// Scenario "Other column order".
     @Test func otherColumnOrder() throws {
         let result = try read([csv("a.csv", ["INDEX,DATE,TIME,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT",
                                              "1,2026/11/02,12:00:00,50.5,S,8.5,E,321"])], IBlueCSVFileFormat())
@@ -254,7 +254,7 @@ struct IBlueCSVTests {
         #expect(point.quality.isEmpty)
     }
 
-    /// Scenario "Vorzeichen im Zahlenwert".
+    /// Scenario "Sign in the number".
     @Test func signInValue() throws {
         let result = try read([csv("a.csv", [iBlueHeader, "1,T,2026/11/02,12:00:00,3d,50.0,N,-8.000456,W,100,0,0",
                                              "2,T,2026/11/02,12:00:01,3d,-50.0,N,8.0,E,100,0,0"])], IBlueCSVFileFormat())
@@ -263,7 +263,7 @@ struct IBlueCSVTests {
         #expect(points[1].latitude == 50)
     }
 
-    /// Scenario "Satelliten".
+    /// Scenario "Satellites".
     @Test func satellites() throws {
         let header = iBlueHeader + ",NSAT (USED/VIEW)"
         let result = try read([csv("a.csv", [header, "1,T,2026/11/02,12:00:00,3d,50.0,N,8.0,E,100,0,0,7(10)"])],
@@ -271,7 +271,7 @@ struct IBlueCSVTests {
         #expect(result.recording.tracks.first?.segments.first?.points.first?.quality.satellites == 7)
     }
 
-    /// Scenario "Unbekannte Werte".
+    /// Scenario "Unknown values".
     @Test func unknownValues() throws {
         let header = "INDEX,RCR,DATE,TIME,VALID,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT,SPEED,HEADING,DSTA,DAGE,PDOP,HDOP,VDOP,NSAT (USED/VIEW),SAT INFO (SID-ELE-AZI-SNR),DISTANCE,"
         let row = "2,T,2026/11/02,12:00:01,Unknown,50.000123,N,-8.000456,W,101,9.0,,,,0.000000,0.000000,0.000000,-1(,,1142.718838"
@@ -289,14 +289,14 @@ struct IBlueCSVTests {
         #expect(result.recording.tracks.first?.segments.first?.points.first?.quality.fix == expected)
     }
 
-    /// Scenario "Millisekunden".
+    /// Scenario "Milliseconds".
     @Test func milliseconds() throws {
         let result = try read([csv("a.csv", [iBlueHeader, "1,T,2026/11/02,12:00:00.500,3d,50.0,N,8.0,E,100,0,0"])],
                               IBlueCSVFileFormat())
         #expect(result.recording.tracks.first?.segments.first?.points.first?.time == date("2026-11-02T12:00:00.500Z"))
     }
 
-    /// Scenario "Pflichtspalte fehlt".
+    /// Scenario "Required column missing".
     @Test func missingRequiredColumn() {
         #expect(throws: GPSLoggerError(.malformed(line: 1), fileName: "a.csv")) {
             try read([csv("a.csv", ["INDEX,DATE,TIME,LATITUDE,N/S,LONGITUDE", "1,2026/11/02,12:00:00,50,N,8"])],
@@ -333,7 +333,7 @@ struct IBlueCSVTests {
 
 @Suite("CSV loggers – detection")
 struct CSVDetectionTests {
-    /// Scenario "V-900-Datei mit Endung .CSV".
+    /// Scenario "V-900 file with extension .CSV".
     @Test func v900() {
         let data = Data((v900SimpleHeader + "\r\n" + v900Row(1) + "\r\n").utf8)
         #expect(FileFormats.detect(prefix: data, fileName: "26110201.CSV")?.id == .v900)
@@ -343,14 +343,14 @@ struct CSVDetectionTests {
         #expect(FileFormats.detect(prefix: pro, fileName: "a.csv")?.id == .v900)
     }
 
-    /// Scenario "iBlue-Datei".
+    /// Scenario "iBlue file".
     @Test func iBlue() {
         let data = Data((iBlueHeader + "\r\n1,T,2026/11/02,12:00:00,3d,50.0,N,8.0,E,100,0,0\r\n").utf8)
         #expect(FileFormats.detect(prefix: data, fileName: "log.csv")?.id == .iblueCSV)
         #expect(!V900FileFormat().matches(prefix: data))
     }
 
-    /// Scenario "Fremde CSV-Datei".
+    /// Scenario "Foreign CSV file".
     @Test func otherCSV() {
         #expect(FileFormats.detect(prefix: Data("Name,Vorname,Ort\r\nMuster,Max,Stadt\r\n".utf8), fileName: "a.csv") == nil)
         #expect(FileFormats.detect(prefix: Data("INDEX,DATE,TIME\r\n".utf8), fileName: "a.csv") == nil)

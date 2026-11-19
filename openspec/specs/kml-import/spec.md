@@ -1,165 +1,165 @@
 # kml-import Specification
 
 ## Purpose
-Liest KML-Dateien (Keyhole Markup Language) und KMZ-Archive ein, wie sie Google Earth, Tracker-Apps, gpsbabel und myTracks schreiben. Aus Pfaden und Google-Tracks entstehen Tracks, aus Punkten Wegpunkte, ohne gpsbabel.
+Reads KML files (Keyhole Markup Language) and KMZ archives as written by Google Earth, tracker apps, gpsbabel and myTracks. Paths and Google tracks become tracks, points become waypoints, without gpsbabel.
 
 ## Requirements
 
-### Requirement: Tracks aus Pfaden
-Jedes `Placemark`, das mindestens eine `LineString` oder einen `gx:Track` enthält, SHALL genau einen Track ergeben. Jede `LineString` und jeder `gx:Track` darin SHALL ein eigenes Segment ergeben, in der Reihenfolge der Datei, auch innerhalb von `MultiGeometry` und `gx:MultiTrack`. Die Punkte einer `LineString` SHALL ohne Zeit übernommen werden. Segmente ohne Punkte SHALL entfallen.
+### Requirement: Tracks from paths
+Every `Placemark` that contains at least one `LineString` or one `gx:Track` SHALL result in exactly one track. Every `LineString` and every `gx:Track` in it SHALL result in a segment of its own, in the order of the file, also inside `MultiGeometry` and `gx:MultiTrack`. The points of a `LineString` SHALL be taken over without a time. Segments without points SHALL be dropped.
 
-#### Scenario: Einfacher Pfad
-- **WHEN** ein `Placemark` eine `LineString` mit 100 Koordinaten enthält
-- **THEN** entsteht ein Track mit einem Segment aus 100 Punkten ohne Zeit
+#### Scenario: Simple path
+- **WHEN** a `Placemark` contains a `LineString` with 100 coordinates
+- **THEN** one track results with one segment of 100 points without a time
 
-#### Scenario: Pfad aus mehreren Teilen
-- **WHEN** ein `Placemark` eine `MultiGeometry` mit zwei `LineString` zu je 3 Koordinaten enthält
-- **THEN** entsteht ein Track mit zwei Segmenten zu je 3 Punkten
+#### Scenario: Path of several parts
+- **WHEN** a `Placemark` contains a `MultiGeometry` with two `LineString` of 3 coordinates each
+- **THEN** one track results with two segments of 3 points each
 
-#### Scenario: Google-Mehrfachtrack
-- **WHEN** ein `Placemark` einen `gx:MultiTrack` mit zwei `gx:Track` enthält
-- **THEN** entsteht ein Track mit zwei Segmenten
+#### Scenario: Google multi-track
+- **WHEN** a `Placemark` contains a `gx:MultiTrack` with two `gx:Track`
+- **THEN** one track results with two segments
 
-### Requirement: Google-Tracks
-Ein `gx:Track` SHALL seine Punkte aus den `gx:coord`-Elementen bilden (Länge, Breite und optional Höhe, durch Leerzeichen getrennt). Das n-te `when` SHALL die Zeit des n-ten Punkts sein. Gibt es weniger `when` als `gx:coord`, SHALL der Rest ohne Zeit übernommen und als Warnung gezählt werden. Überzählige `when` SHALL ignoriert werden. Eine nicht lesbare Zeit SHALL wie eine fehlende zählen.
+### Requirement: Google tracks
+A `gx:Track` SHALL build its points from the `gx:coord` elements (longitude, latitude and optionally altitude, separated by spaces). The n-th `when` SHALL be the time of the n-th point. If there are fewer `when` than `gx:coord`, the rest SHALL be taken over without a time and counted as a warning. Surplus `when` SHALL be ignored. An unreadable time SHALL count like a missing one.
 
-#### Scenario: Track mit Zeiten
-- **WHEN** ein `gx:Track` die Zeiten `2026-05-01T08:00:00Z` und `2026-05-01T08:00:10Z` sowie die Koordinaten `8 50 120` und `8.001 50.001 121` enthält
-- **THEN** entstehen zwei Punkte mit Breite 50 bzw. 50,001, Länge 8 bzw. 8,001, den Höhen 120 m und 121 m und diesen Zeiten
+#### Scenario: Track with times
+- **WHEN** a `gx:Track` contains the times `2026-05-01T08:00:00Z` and `2026-05-01T08:00:10Z` and the coordinates `8 50 120` and `8.001 50.001 121`
+- **THEN** two points result with latitude 50 and 50.001, longitude 8 and 8.001, the elevations 120 m and 121 m and these times
 
-#### Scenario: Zu wenige Zeiten
-- **WHEN** ein `gx:Track` 3 `gx:coord`, aber nur 2 `when` enthält
-- **THEN** hat der dritte Punkt keine Zeit, und eine Warnung zählt einen Punkt ohne Datum
+#### Scenario: Too few times
+- **WHEN** a `gx:Track` contains 3 `gx:coord` but only 2 `when`
+- **THEN** the third point has no time, and a warning counts one point without a date
 
-### Requirement: Wegpunkte
-Jedes `Point` in einem `Placemark` SHALL einen Wegpunkt ergeben, auch wenn das `Placemark` eine Zeit trägt. Der Wegpunkt SHALL `name` als Namen, `description` als Kommentar und die Zeit aus `TimeStamp/when` bekommen, soweit vorhanden. Eine nicht lesbare Zeit eines Wegpunkts SHALL ohne Warnung entfallen. Ausgenommen sind die Punkte des Ordners „Points“ nach der Anforderung „Zeiten aus dem Punktordner von gpsbabel“.
+### Requirement: Waypoints
+Every `Point` in a `Placemark` SHALL result in a waypoint, also when the `Placemark` carries a time. The waypoint SHALL get `name` as name, `description` as comment and the time from `TimeStamp/when`, where present. An unreadable time of a waypoint SHALL be dropped without a warning. Excepted are the points of the folder "Points" according to the requirement "Times from the gpsbabel points folder".
 
-#### Scenario: Markierung mit Beschreibung
-- **WHEN** ein `Placemark` „Hütte“ mit der Beschreibung „Rast“ und einem `Point` vorkommt
-- **THEN** entsteht ein Wegpunkt „Hütte“ mit dem Kommentar „Rast“
+#### Scenario: Marker with description
+- **WHEN** a `Placemark` "Hut" with the description "Rest" and a `Point` occurs
+- **THEN** a waypoint "Hut" with the comment "Rest" results
 
-#### Scenario: Zeitgestempelte Punkte
-- **WHEN** ein Ordner „Fotos“ 5 `Placemark` mit `Point` und `TimeStamp` enthält
-- **THEN** entstehen 5 Wegpunkte mit diesen Zeiten und kein Track
+#### Scenario: Time-stamped points
+- **WHEN** a folder "Photos" contains 5 `Placemark` with `Point` and `TimeStamp`
+- **THEN** 5 waypoints with these times result and no track
 
-### Requirement: Namen der Tracks
-Ein Track SHALL den `name` seines `Placemark` bekommen. Fehlt dieser, ist er leer oder lautet er „Path“ (der feste Platzhalter von gpsbabel), SHALL der Track den Namen des nächsten umgebenden `Folder` oder `Document` mit Namen bekommen, sonst den Dateinamen ohne Endung.
+### Requirement: Names of the tracks
+A track SHALL get the `name` of its `Placemark`. If it is missing, empty or "Path" (the fixed placeholder of gpsbabel), the track SHALL get the name of the nearest enclosing `Folder` or `Document` with a name, otherwise the file name without extension.
 
-#### Scenario: Track aus gpsbabel
-- **WHEN** ein `Placemark` „Path“ in einem `Folder` „Morgenrunde“ liegt
-- **THEN** heißt der Track „Morgenrunde“
+#### Scenario: Track from gpsbabel
+- **WHEN** a `Placemark` "Path" lies in a `Folder` "Morning run"
+- **THEN** the track is called "Morning run"
 
-#### Scenario: Pfad ohne Namen
-- **WHEN** die Datei `tour.kml` ein `Placemark` ohne `name` direkt unter einem `Document` ohne `name` enthält
-- **THEN** heißt der Track „tour“
+#### Scenario: Path without a name
+- **WHEN** the file `tour.kml` contains a `Placemark` without `name` directly below a `Document` without `name`
+- **THEN** the track is called "tour"
 
-### Requirement: Koordinaten
-Ein `coordinates`-Element SHALL Tupel aus Länge, Breite und optional Höhe enthalten, durch Kommas getrennt. Die Tupel sind durch Leerraum getrennt, und Leerraum nach einem Komma SHALL toleriert werden. Ein Tupel mit weniger als zwei lesbaren Zahlen MUST verworfen und als Warnung gezählt werden. Ebenso eine Position außerhalb des gültigen Bereichs.
+### Requirement: Coordinates
+A `coordinates` element SHALL contain tuples of longitude, latitude and optionally altitude, separated by commas. The tuples are separated by white space, and white space after a comma SHALL be tolerated. A tuple with fewer than two readable numbers MUST be discarded and counted as a warning. So must a position outside the valid range.
 
-#### Scenario: Reihenfolge Länge, Breite
-- **WHEN** eine `LineString` das Tupel `8.5,50.25,100` enthält
-- **THEN** hat der Punkt die Breite 50,25 und die Länge 8,5
+#### Scenario: Order longitude, latitude
+- **WHEN** a `LineString` contains the tuple `8.5,50.25,100`
+- **THEN** the point has the latitude 50.25 and the longitude 8.5
 
-#### Scenario: Ungültige Breite
-- **WHEN** ein Tupel die Breite 95 hat
-- **THEN** wird es verworfen, und eine Warnung zählt es
+#### Scenario: Invalid latitude
+- **WHEN** a tuple has the latitude 95
+- **THEN** it is discarded, and a warning counts it
 
-### Requirement: Höhe
-Die Höhe einer `LineString`, eines `Point` oder eines `gx:Track` SHALL übernommen werden, wenn deren `altitudeMode` bzw. `gx:altitudeMode` `absolute` lautet oder fehlt. Bei ausdrücklich gesetztem `clampToGround`, `relativeToGround`, `clampToSeaFloor` oder `relativeToSeaFloor` SHALL die Höhe leer bleiben, ebenso wenn alle Höhen dieser Geometrie 0 sind.
+### Requirement: Altitude
+The altitude of a `LineString`, a `Point` or a `gx:Track` SHALL be taken over if its `altitudeMode` or `gx:altitudeMode` is `absolute` or missing. With an explicitly set `clampToGround`, `relativeToGround`, `clampToSeaFloor` or `relativeToSeaFloor` the altitude SHALL stay empty, likewise when all altitudes of this geometry are 0.
 
-#### Scenario: Export ohne Höhenbezug
-- **WHEN** eine `LineString` ohne `altitudeMode` die Höhen 100, 101 und 102 enthält
-- **THEN** haben die Punkte diese Höhen
+#### Scenario: Export without altitude reference
+- **WHEN** a `LineString` without `altitudeMode` contains the altitudes 100, 101 and 102
+- **THEN** the points have these elevations
 
-#### Scenario: Am Boden
-- **WHEN** eine `LineString` mit `altitudeMode` `clampToGround` die Höhe 100 enthält
-- **THEN** haben die Punkte keine Höhe
+#### Scenario: On the ground
+- **WHEN** a `LineString` with `altitudeMode` `clampToGround` contains the altitude 100
+- **THEN** the points have no elevation
 
-#### Scenario: Nur Nullen
-- **WHEN** alle Tupel einer `LineString` die Höhe 0 haben
-- **THEN** haben die Punkte keine Höhe
+#### Scenario: Only zeros
+- **WHEN** all tuples of a `LineString` have the altitude 0
+- **THEN** the points have no elevation
 
-### Requirement: Zeiten aus dem Punktordner von gpsbabel
-Ein `Folder` „Points“ SHALL dem Track seines Nachbar-Placemarks die Zeiten liefern, wenn:
-- er im selben Container genau ein `Placemark` mit Pfaden hat;
-- jedes `Placemark` in ihm einen `Point` mit lesbarer Zeit hat;
-- Anzahl und Koordinaten, auf 0,000001° genau, mit allen Punkten dieses Tracks übereinstimmen.
+### Requirement: Times from the gpsbabel points folder
+A `Folder` "Points" SHALL provide the times to the track of its neighboring placemark if:
+- it has exactly one `Placemark` with paths in the same container;
+- every `Placemark` in it has a `Point` with a readable time;
+- count and coordinates, to 0.000001°, match all points of this track.
 
-Seine Punkte SHALL dann keine Wegpunkte ergeben. Sonst SHALL er wie jeder andere Ordner gelesen werden.
+Its points SHALL then not result in waypoints. Otherwise it SHALL be read like any other folder.
 
-#### Scenario: Standardausgabe von gpsbabel
-- **WHEN** ein `Folder` „Lauf“ ein `Placemark` „Path“ mit einer `MultiGeometry` aus zwei `LineString` zu je 3 Punkten und einen `Folder` „Points“ mit 6 passenden zeitgestempelten Punkten enthält
-- **THEN** entsteht ein Track „Lauf“ mit zwei Segmenten zu je 3 Punkten mit diesen Zeiten und kein Wegpunkt
+#### Scenario: Standard output of gpsbabel
+- **WHEN** a `Folder` "Run" contains a `Placemark` "Path" with a `MultiGeometry` of two `LineString` of 3 points each and a `Folder` "Points" with 6 matching time-stamped points
+- **THEN** one track "Run" results with two segments of 3 points each with these times and no waypoint
 
-#### Scenario: Punkte passen nicht
-- **WHEN** der `Folder` „Points“ 5 Punkte enthält, der Track aber 6
-- **THEN** bleibt der Track ohne Zeiten, und die 5 Punkte werden Wegpunkte
+#### Scenario: Points do not match
+- **WHEN** the `Folder` "Points" contains 5 points, but the track 6
+- **THEN** the track stays without times, and the 5 points become waypoints
 
-### Requirement: Tracks ohne Zeiten
-Enthält eine Datei mindestens einen Track, dessen Punkte alle keine Zeit haben, SHALL eine einzige Warnung je Datei darauf hinweisen. Für diese Punkte SHALL es keine Warnung „ohne Datum“ geben.
+### Requirement: Tracks without times
+If a file contains at least one track whose points all have no time, one single warning per file SHALL point that out. There SHALL be no warning "without a date" for these points.
 
-#### Scenario: Export aus myTracks
-- **WHEN** eine Datei einen Pfad mit 500 Koordinaten ohne Zeiten enthält
-- **THEN** entsteht ein Track mit 500 Punkten, und genau eine Warnung nennt die Datei als ohne Zeitangaben
+#### Scenario: Export from myTracks
+- **WHEN** a file contains a path with 500 coordinates without times
+- **THEN** one track with 500 points results, and exactly one warning names the file as without times
 
-### Requirement: Unbekannte Inhalte
-Der Import SHALL `Polygon`, `LinearRing`, `Model`, Overlays, Styles, `ExtendedData`, `TimeSpan`, Kamera-Elemente, `gx:Tour` und unbekannte Elemente ohne Warnung übergehen. `NetworkLink` SHALL nicht abgerufen werden. Ordner und Dokumente SHALL in jeder Tiefe gelesen werden.
+### Requirement: Unknown content
+The import SHALL skip `Polygon`, `LinearRing`, `Model`, overlays, styles, `ExtendedData`, `TimeSpan`, camera elements, `gx:Tour` and unknown elements without a warning. `NetworkLink` SHALL NOT be fetched. Folders and documents SHALL be read at any depth.
 
-#### Scenario: Gebietsgrenze
-- **WHEN** eine Datei neben einem Pfad ein `Placemark` mit `Polygon` enthält
-- **THEN** entsteht nur der Track des Pfads, ohne Warnung
+#### Scenario: Area boundary
+- **WHEN** a file contains a `Placemark` with `Polygon` next to a path
+- **THEN** only the track of the path results, without a warning
 
-#### Scenario: Netzwerk-Link
-- **WHEN** eine Datei nur einen `NetworkLink` enthält
-- **THEN** wird keine Verbindung aufgebaut, und das Einlesen meldet „keine verwertbaren Daten“
+#### Scenario: Network link
+- **WHEN** a file contains only a `NetworkLink`
+- **THEN** no connection is made, and reading reports "no usable data"
 
-### Requirement: Namensräume
-Der Import SHALL Dateien mit dem Namensraum von KML 2.2 (`http://www.opengis.net/kml/2.2`), mit den Google-Namensräumen `http://earth.google.com/kml/2.0`, `2.1` und `2.2` und ohne Namensraum gleich behandeln. Die Elemente von Googles Erweiterung SHALL an ihrem Namen erkannt werden, mit oder ohne Präfix.
+### Requirement: Namespaces
+The import SHALL treat files with the namespace of KML 2.2 (`http://www.opengis.net/kml/2.2`), with the Google namespaces `http://earth.google.com/kml/2.0`, `2.1` and `2.2` and without a namespace the same. The elements of Google's extension SHALL be recognized by their name, with or without a prefix.
 
-#### Scenario: Alte Google-Earth-Datei
-- **WHEN** eine Datei den Namensraum `http://earth.google.com/kml/2.1` verwendet
-- **THEN** entstehen dieselben Tracks und Wegpunkte wie bei KML 2.2
+#### Scenario: Old Google Earth file
+- **WHEN** a file uses the namespace `http://earth.google.com/kml/2.1`
+- **THEN** the same tracks and waypoints result as with KML 2.2
 
-### Requirement: KMZ-Archive
-Ein KMZ-Archiv SHALL als ZIP-Archiv gelesen werden. Gelesen wird das Dokument `doc.kml` im Wurzelverzeichnis, sonst die erste Datei mit Endung `.kml` im Wurzelverzeichnis. Die Einträge können ungepackt („stored“) oder mit „deflate“ gepackt sein. Alle anderen Einträge SHALL ignoriert werden. Für das Dokument gelten dieselben Regeln wie für eine KML-Datei.
+### Requirement: KMZ archives
+A KMZ archive SHALL be read as a ZIP archive. The document `doc.kml` in the root directory is read, otherwise the first file with the extension `.kml` in the root directory. The entries can be uncompressed ("stored") or compressed with "deflate". All other entries SHALL be ignored. The same rules as for a KML file apply to the document.
 
-#### Scenario: Archiv mit Bildern
-- **WHEN** ein KMZ-Archiv eine gepackte `doc.kml` mit einem Pfad und zwei Bilder enthält
-- **THEN** entsteht der Track des Pfads
+#### Scenario: Archive with images
+- **WHEN** a KMZ archive contains a compressed `doc.kml` with a path and two images
+- **THEN** the track of the path results
 
-#### Scenario: Anderer Dateiname
-- **WHEN** ein KMZ-Archiv nur `tour.kml` und keine `doc.kml` enthält
-- **THEN** wird `tour.kml` gelesen
+#### Scenario: Other file name
+- **WHEN** a KMZ archive contains only `tour.kml` and no `doc.kml`
+- **THEN** `tour.kml` is read
 
-### Requirement: Beschädigte KMZ-Archive
-Eine falsche Prüfsumme (CRC-32) des gelesenen Dokuments SHALL eine Warnung ergeben, die die Datei nennt. Das Dokument SHALL trotzdem gelesen werden. Ein Archiv ohne KML-Dokument oder ein abgeschnittenes Archiv MUST zu einem Fehler mit der Datei führen. Ebenso ein verschlüsseltes Dokument, ein unbekanntes Packverfahren, ZIP64 oder ein Dokument, das entpackt größer als 1 GiB wäre.
+### Requirement: Damaged KMZ archives
+A wrong checksum (CRC-32) of the document read SHALL result in a warning that names the file. The document SHALL be read anyway. An archive without a KML document or a truncated archive MUST lead to an error with the file. So must an encrypted document, an unknown compression method, ZIP64 or a document that would be larger than 1 GiB when unpacked.
 
-#### Scenario: Falsche Prüfsumme
-- **WHEN** die CRC-32 der `doc.kml` nicht zum Inhalt passt
-- **THEN** enthält die Aufzeichnung den Inhalt des Dokuments, und eine Warnung nennt die Datei
+#### Scenario: Wrong checksum
+- **WHEN** the CRC-32 of `doc.kml` does not match its content
+- **THEN** the recording contains the content of the document, and a warning names the file
 
-#### Scenario: Kein KML im Archiv
-- **WHEN** ein ZIP-Archiv, das nur Bilder enthält, als KMZ gelesen wird
-- **THEN** endet das Einlesen mit einem Fehler, der die Datei nennt
+#### Scenario: No KML in the archive
+- **WHEN** a ZIP archive that contains only images is read as KMZ
+- **THEN** reading ends with an error that names the file
 
-#### Scenario: Abgeschnittenes Archiv
-- **WHEN** ein KMZ-Archiv nach der Hälfte endet
-- **THEN** endet das Einlesen mit einem Fehler, der die Datei nennt
+#### Scenario: Truncated archive
+- **WHEN** a KMZ archive ends after half of it
+- **THEN** reading ends with an error that names the file
 
-### Requirement: Fehler
-Ein KML-Dokument, das kein wohlgeformtes XML ist, MUST zu einem Fehler mit Datei und Zeile führen.
+### Requirement: Errors
+A KML document that is not well-formed XML MUST lead to an error with file and line.
 
-#### Scenario: Abgeschnittene Datei
-- **WHEN** eine KML-Datei mitten in einem `coordinates`-Element endet
-- **THEN** endet das Einlesen mit einem Fehler, der Datei und Zeile nennt
+#### Scenario: Truncated file
+- **WHEN** a KML file ends in the middle of a `coordinates` element
+- **THEN** reading ends with an error that names file and line
 
-### Requirement: Erkennung
-Eine Datei SHALL als KML erkannt werden, wenn ihr erstes Element `kml` ist, mit oder ohne Namensraum-Präfix. Ein ZIP-Archiv SHALL als KML erkannt werden, wenn sein erster Eintrag eine Datei mit Endung `.kml` ist. Die Endungen `.kml` und `.kmz` SHALL nur als Hinweis dienen.
+### Requirement: Detection
+A file SHALL be recognized as KML if its first element is `kml`, with or without a namespace prefix. A ZIP archive SHALL be recognized as KML if its first entry is a file with the extension `.kml`. The extensions `.kml` and `.kmz` SHALL only serve as a hint.
 
-#### Scenario: KML mit Endung .xml
-- **WHEN** eine KML-Datei die Endung `.xml` hat
-- **THEN** schlägt die Erkennung KML vor
+#### Scenario: KML with extension .xml
+- **WHEN** a KML file has the extension `.xml`
+- **THEN** the detection suggests KML
 
-#### Scenario: Anderes ZIP-Archiv
-- **WHEN** ein Word-Dokument (`.docx`, ein ZIP-Archiv) geprüft wird
-- **THEN** wird es nicht als KML erkannt
+#### Scenario: Other ZIP archive
+- **WHEN** a Word document (`.docx`, a ZIP archive) is checked
+- **THEN** it is not recognized as KML

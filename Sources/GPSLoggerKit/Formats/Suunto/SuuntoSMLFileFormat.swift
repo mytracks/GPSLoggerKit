@@ -56,7 +56,7 @@ private final class SuuntoParserHandler: NSObject, XMLParserDelegate {
     var sawRoot = false
     var rootError: String?
 
-    /// Barometric altitude is used for a point if it is at most this old (spec "Höhe").
+    /// Barometric altitude is used for a point if it is at most this old (spec "Elevation").
     static let barometricAltitudeMaxAge: TimeInterval = 60
 
     private var cancellation = CancellationCheck()

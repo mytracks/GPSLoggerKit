@@ -43,7 +43,7 @@ struct NMEALineTests {
         #expect(points(try read(text)).count == 3)
     }
 
-    /// Scenario "Sony-Logdatei".
+    /// Scenario "Sony log file".
     @Test func atLinesAreSkipped() throws {
         let text = "@Sonygps/ver1.0/wgs-84\n" + rmc("120000") + "\n@Sonygps/ver1.0/wgs-84\n" + gga("120001") + "\n"
         let result = try read(text)
@@ -51,7 +51,7 @@ struct NMEALineTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Falsche Prüfsumme".
+    /// Scenario "Wrong checksum".
     @Test func wrongChecksumIsSkippedAndCounted() throws {
         var broken = rmc("120001")
         broken.replaceSubrange(broken.index(broken.endIndex, offsetBy: -2)..., with: "00")
@@ -65,7 +65,7 @@ struct NMEALineTests {
         #expect(points(try read(text)).count == 1)
     }
 
-    /// Scenario "Abgeschnittene letzte Zeile".
+    /// Scenario "Truncated last line".
     @Test func truncatedLastLineIsDropped() throws {
         let text = rmc("120000") + "\n" + rmc("120001") + "\n$GPRMC,120002,A,5144.46"
         let result = try read(text)
@@ -73,7 +73,7 @@ struct NMEALineTests {
         #expect(result.warnings.map(\.kind) == [.malformedRecord])
     }
 
-    /// Scenario "Multi-GNSS-Logger".
+    /// Scenario "Multi-GNSS logger".
     @Test(arguments: ["GN", "GL", "GA", "GB", "BD", "GQ"])
     func anyTalkerIsAccepted(talker: String) throws {
         let text = nmea("\(talker)RMC,120000,A,5144.4694,N,00840.8580,E,10.0,90.0,021126,,,A") + "\n"
@@ -83,7 +83,7 @@ struct NMEALineTests {
         #expect(points(result).first?.elevation == 94.5)
     }
 
-    /// Scenario "Satellitenstatus".
+    /// Scenario "Satellite status".
     @Test func gsvAndProprietarySentencesAreIgnoredSilently() throws {
         let text = [rmc("120000"),
                     nmea("GPGSV,3,1,11,03,03,111,00,04,15,270,00,06,01,010,00,13,06,292,00"),
@@ -135,7 +135,7 @@ struct NMEAFieldTests {
         #expect(result.warnings.first?.count == 2)
     }
 
-    /// Scenario "Logger ohne Empfang".
+    /// Scenario "Logger without reception".
     @Test func onlyValidFixes() throws {
         var lines = (0..<50).map { rmc(String(format: "1200%02d", $0), status: "V", lat: ",", lon: ",") }
         lines += (0..<10).map { rmc(String(format: "1201%02d", $0)) }
@@ -187,7 +187,7 @@ struct NMEAFieldTests {
         #expect(point.quality.course == 90)
     }
 
-    /// Scenario "WPL-Satz".
+    /// Scenario "WPL sentence".
     @Test func wplBecomesAWaypoint() throws {
         let result = try read(rmc("120000") + "\n" + nmea("GPWPL,5144.4694,N,00840.8580,E,HOME"))
         let waypoint = try #require(result.recording.waypoints.first)
@@ -205,7 +205,7 @@ struct NMEAFieldTests {
 
 @Suite("NMEA – epochs and dates")
 struct NMEADateTests {
-    /// Scenario "RMC und GGA zur selben Sekunde".
+    /// Scenario "RMC and GGA in the same second".
     @Test func rmcAndGGAOfOneSecondFormOnePoint() throws {
         let result = try read(rmc("120001") + "\n" + gga("120001", sats: "08", alt: "94.5"))
         let point = try #require(points(result).first)
@@ -221,20 +221,20 @@ struct NMEADateTests {
         #expect(points(result).allSatisfy { $0.elevation == 94.5 && $0.quality.speed != nil })
     }
 
-    /// Scenario "Nur GGA" (with a date from an earlier RMC).
+    /// Scenario "GGA only" (with a date from an earlier RMC).
     @Test func onlyGGAGivesOnePointPerSentence() throws {
         let text = ([rmc("115959")] + (0..<5).map { gga(String(format: "1200%02d", $0)) }).joined(separator: "\n")
         #expect(points(try read(text)).count == 6)
     }
 
-    /// Scenario "Mitternacht".
+    /// Scenario "Midnight".
     @Test func midnightAdvancesTheDate() throws {
         let text = [rmc("235959", date: "021126"), gga("000000"), gga("000001")].joined(separator: "\n")
         let times = points(try read(text)).map(\.time)
         #expect(times == [utc(2026, 11, 2, 23, 59, 59), utc(2026, 11, 3, 0, 0, 0), utc(2026, 11, 3, 0, 0, 1)])
     }
 
-    /// Scenario "GGA vor dem ersten RMC".
+    /// Scenario "GGA before the first RMC".
     @Test func pointsBeforeTheFirstDateGetIt() throws {
         let text = [gga("120000"), gga("120001"), gga("120002"), rmc("120003")].joined(separator: "\n")
         let result = try read(text)
@@ -247,7 +247,7 @@ struct NMEADateTests {
         #expect(points(try read(text)).map(\.time) == [utc(2026, 11, 2, 23, 59, 59), utc(2026, 11, 3, 0, 0, 0)])
     }
 
-    /// Scenario "Datei ganz ohne Datum".
+    /// Scenario "File without any date".
     @Test func fileWithoutAnyDate() throws {
         let result = try read([gga("120000"), gga("120001"), gga("120002")].joined(separator: "\n"))
         #expect(points(result).count == 3)
@@ -276,7 +276,7 @@ struct NMEADateTests {
 
 @Suite("NMEA – tracks and segments")
 struct NMEASegmentTests {
-    /// Scenario "Drei Dateien eines Tages".
+    /// Scenario "Three files of one day".
     @Test func threeFilesFormOneTrackWithThreeSegments() throws {
         let files = (0..<3).map { file in
             ("\(file).nmea", (0..<4).map { rmc(String(format: "1%d00%02d", file, $0)) }.joined(separator: "\n"))
@@ -292,7 +292,7 @@ struct NMEASegmentTests {
         #expect(result.warnings.map(\.kind) == [.missingDate])
     }
 
-    /// Scenario "Zeitrücksprung".
+    /// Scenario "Time jumps back".
     @Test func timeGoingBackwardsStartsANewSegment() throws {
         let text = [rmc("100004"), rmc("100005"), rmc("090000"), rmc("090001")].joined(separator: "\n")
         #expect(try read(text).recording.tracks[0].segments.map(\.points.count) == [2, 2])
@@ -307,14 +307,14 @@ struct NMEASegmentTests {
 
 @Suite("NMEA – detection")
 struct NMEADetectionTests {
-    /// Scenario "NMEA mit falscher Endung".
+    /// Scenario "NMEA with a wrong extension".
     @Test func nmeaWithTxtExtension() {
         let data = Data(([rmc("120000"), gga("120000"), rmc("120001")].joined(separator: "\n")).utf8)
         #expect(FileFormats.detect(prefix: data, fileName: "log.txt")?.id == .nmea)
         #expect(FileFormats.detect(prefix: data, fileName: "data.gpx")?.id == .nmea)
     }
 
-    /// Scenario "Canon-EOS-Log".
+    /// Scenario "Canon EOS log".
     @Test func canonLogWithHeader() throws {
         let url = try #require(Bundle.module.url(forResource: "canon-eos", withExtension: "LOG", subdirectory: "Fixtures"))
         let input = try FileInput.load(url)

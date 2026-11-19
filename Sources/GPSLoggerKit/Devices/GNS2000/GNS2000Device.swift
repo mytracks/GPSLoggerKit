@@ -158,7 +158,7 @@ struct GNS2000Link {
 
 /// Splits the points into tracks where the time goes backwards; tracks are named after their first point (UTC).
 /// Times are corrected for GPS week rollovers first, so that names and splits follow the corrected times
-/// (spec `device-mode`, "Korrektur des GPS-Wochenüberlaufs beim Auslesen").
+/// (spec `device-mode`, "GPS week rollover correction when reading").
 struct GNS2000Tracks {
     let reference: Date
     private var tracks: [[TrackPoint]] = [[]]

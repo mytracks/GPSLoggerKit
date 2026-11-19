@@ -1,141 +1,141 @@
 # csv-logger-import Specification
 
 ## Purpose
-Liest die CSV-Dateien der Columbus V-900/Visiontac VGPS-900 und der iBlue-Software, clean-room in GPSLoggerKit. Daraus entstehen Tracks und, aus Markierungen, Wegpunkte.
+Reads the CSV files of the Columbus V-900/Visiontac VGPS-900 and of the iBlue software, clean-room in GPSLoggerKit. They become tracks and, from markers, waypoints.
 
 ## Requirements
 
-### Requirement: Zeilen
-Der Import SHALL CSV-Dateien zeilenweise lesen und Zeilen mit LF, CRLF oder CR als Ende akzeptieren. Leere Zeilen und Zeilen, die nur aus Füllbytes bestehen, SHALL er ohne Warnung übergehen.
+### Requirement: Lines
+The import SHALL read CSV files line by line and accept lines ending with LF, CRLF or CR. It SHALL skip empty lines and lines that consist only of padding bytes without a warning.
 
-#### Scenario: Leere Zeile am Ende
-- **WHEN** eine Datei mit einer Leerzeile oder einer Zeile aus NUL-Bytes endet
-- **THEN** entsteht daraus weder ein Punkt noch eine Warnung
+#### Scenario: Empty line at the end
+- **WHEN** a file ends with an empty line or a line of NUL bytes
+- **THEN** neither a point nor a warning results from it
 
-### Requirement: Felder
-Der Import SHALL die Felder einer Zeile am Komma trennen und jedes Feld von Leerzeichen, Tabulatoren und NUL-Bytes am Anfang und Ende befreien. Ein leeres Feld SHALL als fehlender Wert gelten.
+### Requirement: Fields
+The import SHALL split the fields of a line at the comma and strip spaces, tabs and NUL bytes from the start and end of every field. An empty field SHALL count as a missing value.
 
-#### Scenario: Felder mit Füllbytes
-- **WHEN** ein Feld einer V-900-Datei `100` gefolgt von zwei NUL-Bytes enthält
-- **THEN** wird es als `100` gelesen
+#### Scenario: Fields with padding bytes
+- **WHEN** a field of a V-900 file contains `100` followed by two NUL bytes
+- **THEN** it is read as `100`
 
-### Requirement: Kopfzeile
-Eine Datei SHALL mit einer Kopfzeile beginnen. Die Spalten SHALL über die Namen dieser Kopfzeile zugeordnet werden, unabhängig von Groß- und Kleinschreibung. Ein leeres Feld nach einem abschließenden Komma SHALL keine eigene Spalte bilden. Fehlt eine Pflichtspalte des Formats, MUST das Lesen mit einem Fehler enden, der die Datei und Zeile 1 nennt.
+### Requirement: Header line
+A file SHALL start with a header line. The columns SHALL be assigned by the names of this header line, case-insensitively. An empty field after a trailing comma SHALL NOT form a column of its own. If a required column of the format is missing, reading MUST end with an error that names the file and line 1.
 
-#### Scenario: Pflichtspalte fehlt
-- **WHEN** einer iBlue-CSV-Datei die Spalte `E/W` fehlt
-- **THEN** endet das Lesen mit einem Fehler für Zeile 1
+#### Scenario: Required column missing
+- **WHEN** an iBlue CSV file lacks the column `E/W`
+- **THEN** reading ends with an error for line 1
 
-### Requirement: Verworfene Zeilen
-Eine Datenzeile mit ungültigem oder fehlendem Datum, ungültiger Zeit oder nicht lesbarer Position MUST verworfen und als Warnung gezählt werden, mit der Zeilennummer des ersten Falls. Eine Position außerhalb des gültigen Bereichs MUST verworfen und als ungültige Koordinate gezählt werden. Nicht lesbare Höhen, Geschwindigkeiten, Kurse und DOP-Werte SHALL ohne Warnung als fehlend gelten.
+### Requirement: Discarded lines
+A data line with an invalid or missing date, an invalid time or an unreadable position MUST be discarded and counted as a warning, with the line number of the first case. A position outside the valid range MUST be discarded and counted as an invalid coordinate. Unreadable elevations, speeds, courses and DOP values SHALL count as missing without a warning.
 
-#### Scenario: Unbrauchbare Zeile
-- **WHEN** eine Datenzeile weniger Felder hat, als für Datum, Zeit und Position nötig sind
-- **THEN** entsteht daraus kein Punkt, und eine Warnung zählt den verworfenen Datensatz mit seiner Zeilennummer
+#### Scenario: Unusable line
+- **WHEN** a data line has fewer fields than needed for date, time and position
+- **THEN** no point results from it, and a warning counts the discarded record with its line number
 
-#### Scenario: Breite außerhalb des Bereichs
-- **WHEN** eine Zeile die Breite 95° hat
-- **THEN** entsteht daraus kein Punkt, und eine Warnung zählt die ungültige Koordinate
+#### Scenario: Latitude out of range
+- **WHEN** a line has the latitude 95°
+- **THEN** no point results from it, and a warning counts the invalid coordinate
 
-### Requirement: V-900-Spalten
-Das Format `v900` SHALL Dateien lesen, deren Kopfzeile mit den Spalten `INDEX`, `TAG`, `DATE`, `TIME`, `LATITUDE N/S` und `LONGITUDE E/W` beginnt. Es SHALL die Spalten des einfachen Modus (`HEIGHT`, `SPEED`, `HEADING`, `VOX`) und des professionellen Modus (zusätzlich `FIX MODE`, `VALID`, `PDOP`, `HDOP`, `VDOP`) auswerten, soweit vorhanden.
+### Requirement: V-900 columns
+The format `v900` SHALL read files whose header line starts with the columns `INDEX`, `TAG`, `DATE`, `TIME`, `LATITUDE N/S` and `LONGITUDE E/W`. It SHALL evaluate the columns of the simple mode (`HEIGHT`, `SPEED`, `HEADING`, `VOX`) and of the professional mode (additionally `FIX MODE`, `VALID`, `PDOP`, `HDOP`, `VDOP`), where present.
 
-#### Scenario: Einfacher Modus
-- **WHEN** eine Datei die Kopfzeile `INDEX,TAG,DATE,TIME,LATITUDE N/S,LONGITUDE E/W,HEIGHT,SPEED,HEADING,VOX` und die Zeile `1,T,261102,120000,50.000000N,008.000000E,100,36,45,` enthält
-- **THEN** entsteht ein Punkt bei 50,0° Nord und 8,0° Ost mit der Zeit 2026-11-02T12:00:00Z, der Höhe 100 m, der Geschwindigkeit 10 m/s und dem Kurs 45°
+#### Scenario: Simple mode
+- **WHEN** a file contains the header line `INDEX,TAG,DATE,TIME,LATITUDE N/S,LONGITUDE E/W,HEIGHT,SPEED,HEADING,VOX` and the line `1,T,261102,120000,50.000000N,008.000000E,100,36,45,`
+- **THEN** a point results at 50.0° north and 8.0° east with the time 2026-11-02T12:00:00Z, the elevation 100 m, the speed 10 m/s and the course 45°
 
-### Requirement: V-900-Zeit und -Position
-Das Format `v900` SHALL `DATE` als `JJMMTT` mit den Jahren 2000–2099 und `TIME` als `hhmmss` lesen, zusammen als UTC. Es SHALL `LATITUDE N/S` und `LONGITUDE E/W` als Dezimalgrad mit nachgestelltem `N`, `S`, `E` oder `W` lesen, wobei `S` und `W` den Wert negativ machen. Ein anderer Buchstabe MUST die Zeile verwerfen.
+### Requirement: V-900 time and position
+The format `v900` SHALL read `DATE` as `YYMMDD` with the years 2000–2099 and `TIME` as `hhmmss`, together as UTC. It SHALL read `LATITUDE N/S` and `LONGITUDE E/W` as decimal degrees with a trailing `N`, `S`, `E` or `W`, where `S` and `W` make the value negative. Another letter MUST discard the line.
 
-#### Scenario: Südlich und westlich
-- **WHEN** eine Zeile die Position `50.000200S` und `008.000100W` hat
-- **THEN** sind Breite und Länge negativ
+#### Scenario: South and west
+- **WHEN** a line has the position `50.000200S` and `008.000100W`
+- **THEN** latitude and longitude are negative
 
-#### Scenario: Ungültige Hemisphäre
-- **WHEN** eine Zeile die Breite `50.000000X` hat
-- **THEN** entsteht daraus kein Punkt, und eine Warnung zählt den verworfenen Datensatz
+#### Scenario: Invalid hemisphere
+- **WHEN** a line has the latitude `50.000000X`
+- **THEN** no point results from it, and a warning counts the discarded record
 
-### Requirement: V-900-Messwerte
-Das Format `v900` SHALL `HEIGHT` als Höhe in Metern, `SPEED` in km/h und `HEADING` als Kurs in Grad lesen. Im professionellen Modus SHALL `VALID` = `DGPS` die Fix-Art `dgps` ergeben, sonst `FIX MODE` = `2D` bzw. `3D` die Fix-Art `2d` bzw. `3d`. `PDOP`, `HDOP` und `VDOP` SHALL übernommen werden, wenn sie größer als 0 sind.
+### Requirement: V-900 measurements
+The format `v900` SHALL read `HEIGHT` as elevation in meters, `SPEED` in km/h and `HEADING` as course in degrees. In professional mode `VALID` = `DGPS` SHALL result in the fix type `dgps`, otherwise `FIX MODE` = `2D` or `3D` in the fix type `2d` or `3d`. `PDOP`, `HDOP` and `VDOP` SHALL be taken over if they are greater than 0.
 
-#### Scenario: Professioneller Modus
-- **WHEN** eine Datei zusätzlich die Spalten `FIX MODE`, `VALID`, `PDOP`, `HDOP` und `VDOP` hat und eine Zeile die Werte `3D`, `SPS`, `2.1`, `1.2` und `1.8` enthält
-- **THEN** hat der Punkt die Fix-Art `3d`, PDOP 2,1, HDOP 1,2 und VDOP 1,8
+#### Scenario: Professional mode
+- **WHEN** a file additionally has the columns `FIX MODE`, `VALID`, `PDOP`, `HDOP` and `VDOP` and a line contains the values `3D`, `SPS`, `2.1`, `1.2` and `1.8`
+- **THEN** the point has the fix type `3d`, PDOP 2.1, HDOP 1.2 and VDOP 1.8
 
-#### Scenario: Differentielles GPS
-- **WHEN** eine Zeile im professionellen Modus `VALID` = `DGPS` hat
-- **THEN** hat der Punkt die Fix-Art `dgps`
+#### Scenario: Differential GPS
+- **WHEN** a line in professional mode has `VALID` = `DGPS`
+- **THEN** the point has the fix type `dgps`
 
-#### Scenario: Negative Höhe
-- **WHEN** das Feld `HEIGHT` den Wert `-5` hat
-- **THEN** hat der Punkt die Höhe -5 m
+#### Scenario: Negative elevation
+- **WHEN** the field `HEIGHT` has the value `-5`
+- **THEN** the point has the elevation -5 m
 
-### Requirement: V-900-Markierungen
-Jede gültige Zeile einer V-900-Datei SHALL einen Trackpunkt ergeben. Hat `TAG` den Wert `C` oder `D` (Markierung per Taste), SHALL zusätzlich ein Wegpunkt mit Position, Zeit und Höhe des Punkts entstehen, der `POI` gefolgt von der laufenden Nummer der Markierung in der Datei heißt. Bei `TAG` = `V` (Sprachaufnahme) SHALL der Wegpunkt wie die Aufnahme heißen, also wie der Wert aus `VOX` mit der Endung `.WAV`. Ist `VOX` leer, SHALL er wie eine Markierung per Taste heißen.
+### Requirement: V-900 markers
+Every valid line of a V-900 file SHALL result in a track point. If `TAG` has the value `C` or `D` (marker by button), a waypoint SHALL additionally result with position, time and elevation of the point, named `POI` followed by the running number of the marker in the file. For `TAG` = `V` (voice recording) the waypoint SHALL be named like the recording, that is like the value from `VOX` with the extension `.WAV`. If `VOX` is empty, it SHALL be named like a marker by button.
 
-#### Scenario: Markierung per Taste
-- **WHEN** die zweite Markierung einer Datei eine Zeile mit `TAG` = `C` ist
-- **THEN** entstehen ein Trackpunkt und ein Wegpunkt namens `POI 2` an derselben Position
+#### Scenario: Marker by button
+- **WHEN** the second marker of a file is a line with `TAG` = `C`
+- **THEN** a track point and a waypoint named `POI 2` result at the same position
 
-#### Scenario: Sprachaufnahme
-- **WHEN** eine Zeile `TAG` = `V` und `VOX` = `VOX00003` hat
-- **THEN** entsteht neben dem Trackpunkt ein Wegpunkt namens `VOX00003.WAV`
+#### Scenario: Voice recording
+- **WHEN** a line has `TAG` = `V` and `VOX` = `VOX00003`
+- **THEN** a waypoint named `VOX00003.WAV` results next to the track point
 
-### Requirement: iBlue-Spalten
-Das Format `iblue-csv` SHALL Dateien lesen, deren Kopfzeile mit `INDEX` beginnt und die Spalten `DATE`, `TIME`, `LATITUDE`, `N/S`, `LONGITUDE` und `E/W` enthält, in beliebiger Reihenfolge. Es SHALL außerdem `VALID`, `HEIGHT`, `SPEED`, `HEADING`, `PDOP`, `HDOP`, `VDOP` und die Satellitenspalte `NSAT` auswerten, soweit vorhanden. Andere Spalten SHALL es ohne Warnung übergehen.
+### Requirement: iBlue columns
+The format `iblue-csv` SHALL read files whose header line starts with `INDEX` and contains the columns `DATE`, `TIME`, `LATITUDE`, `N/S`, `LONGITUDE` and `E/W`, in any order. It SHALL also evaluate `VALID`, `HEIGHT`, `SPEED`, `HEADING`, `PDOP`, `HDOP`, `VDOP` and the satellite column `NSAT`, where present. It SHALL skip other columns without a warning.
 
-#### Scenario: Export eines iBlue 747
-- **WHEN** eine Datei die Kopfzeile `INDEX,RCR,DATE,TIME,VALID,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT,SPEED,HEADING` und die Zeile `1,T,2026/11/02,12:00:00,3d,50.000000,N,8.000000,E,100,5.4,45` enthält
-- **THEN** entsteht ein Punkt bei 50,0° Nord und 8,0° Ost mit der Zeit 2026-11-02T12:00:00Z, der Höhe 100 m, der Geschwindigkeit 1,5 m/s, dem Kurs 45° und der Fix-Art `3d`
+#### Scenario: Export of an iBlue 747
+- **WHEN** a file contains the header line `INDEX,RCR,DATE,TIME,VALID,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT,SPEED,HEADING` and the line `1,T,2026/11/02,12:00:00,3d,50.000000,N,8.000000,E,100,5.4,45`
+- **THEN** a point results at 50.0° north and 8.0° east with the time 2026-11-02T12:00:00Z, the elevation 100 m, the speed 1.5 m/s, the course 45° and the fix type `3d`
 
-#### Scenario: Andere Spaltenreihenfolge
-- **WHEN** eine Datei die Spalten in der Reihenfolge `INDEX,DATE,TIME,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT` hat
-- **THEN** werden Position, Zeit und Höhe aus den benannten Spalten gelesen
+#### Scenario: Other column order
+- **WHEN** a file has the columns in the order `INDEX,DATE,TIME,LATITUDE,N/S,LONGITUDE,E/W,HEIGHT`
+- **THEN** position, time and elevation are read from the named columns
 
-### Requirement: iBlue-Zeit und -Position
-Das Format `iblue-csv` SHALL `DATE` als `JJJJ/MM/TT` oder `TT/MM/JJJJ` lesen und `TIME` als `hh:mm:ss`, wahlweise mit Bruchteilen von Sekunden, zusammen als UTC. `LATITUDE` und `LONGITUDE` SHALL es als Dezimalgrad lesen. Das Vorzeichen SHALL sich allein aus `N/S` bzw. `E/W` ergeben, ein Minuszeichen im Zahlenwert SHALL ignoriert werden. Andere Buchstaben als `N`, `S`, `E` und `W` MUST die Zeile verwerfen.
+### Requirement: iBlue time and position
+The format `iblue-csv` SHALL read `DATE` as `YYYY/MM/DD` or `DD/MM/YYYY` and `TIME` as `hh:mm:ss`, optionally with fractions of seconds, together as UTC. It SHALL read `LATITUDE` and `LONGITUDE` as decimal degrees. The sign SHALL result only from `N/S` or `E/W`; a minus sign in the number SHALL be ignored. Letters other than `N`, `S`, `E` and `W` MUST discard the line.
 
-#### Scenario: Datum eines iBlue 757
-- **WHEN** das Feld `DATE` den Wert `02/11/2026` hat
-- **THEN** hat der Punkt das Datum 2. November 2026
+#### Scenario: Date of an iBlue 757
+- **WHEN** the field `DATE` has the value `02/11/2026`
+- **THEN** the point has the date 2 November 2026
 
-#### Scenario: Millisekunden
-- **WHEN** das Feld `TIME` den Wert `12:00:00.500` hat
-- **THEN** hat der Punkt die Zeit 2026-11-02T12:00:00.500Z
+#### Scenario: Milliseconds
+- **WHEN** the field `TIME` has the value `12:00:00.500`
+- **THEN** the point has the time 2026-11-02T12:00:00.500Z
 
-#### Scenario: Vorzeichen im Zahlenwert
-- **WHEN** eine Zeile die Länge `-8.000456` mit `E/W` = `W` hat
-- **THEN** hat der Punkt die Länge -8,000456°
+#### Scenario: Sign in the number
+- **WHEN** a line has the longitude `-8.000456` with `E/W` = `W`
+- **THEN** the point has the longitude -8.000456°
 
-### Requirement: iBlue-Messwerte
-Das Format `iblue-csv` SHALL `HEIGHT` als Höhe in Metern, `SPEED` in km/h und `HEADING` als Kurs in Grad lesen. `VALID` SHALL mit den Werten `2d`, `3d` und `DGPS` die Fix-Art ergeben, unabhängig von Groß- und Kleinschreibung; andere Werte ergeben keine. `PDOP`, `HDOP` und `VDOP` SHALL nur übernommen werden, wenn sie größer als 0 sind. Aus `NSAT` SHALL die führende Zahl die Anzahl der genutzten Satelliten ergeben; negative Werte gelten als fehlend.
+### Requirement: iBlue measurements
+The format `iblue-csv` SHALL read `HEIGHT` as elevation in meters, `SPEED` in km/h and `HEADING` as course in degrees. `VALID` SHALL result in the fix type with the values `2d`, `3d` and `DGPS`, case-insensitively; other values result in none. `PDOP`, `HDOP` and `VDOP` SHALL only be taken over if they are greater than 0. From `NSAT` the leading number SHALL give the number of used satellites; negative values count as missing.
 
-#### Scenario: Satelliten
-- **WHEN** das Feld `NSAT (USED/VIEW)` den Wert `7(10)` hat
-- **THEN** hat der Punkt 7 Satelliten
+#### Scenario: Satellites
+- **WHEN** the field `NSAT (USED/VIEW)` has the value `7(10)`
+- **THEN** the point has 7 satellites
 
-#### Scenario: Unbekannte Werte
-- **WHEN** eine Zeile `VALID` = `Unknown`, `PDOP` = `0.000000` und `NSAT` = `-1(` hat
-- **THEN** hat der Punkt weder Fix-Art noch PDOP noch Satellitenzahl
+#### Scenario: Unknown values
+- **WHEN** a line has `VALID` = `Unknown`, `PDOP` = `0.000000` and `NSAT` = `-1(`
+- **THEN** the point has neither a fix type nor PDOP nor a number of satellites
 
-### Requirement: Tracks der CSV-Formate
-Jede eingelesene Datei SHALL genau einen Track mit einem Segment ergeben, wenn sie mindestens einen gültigen Punkt enthält. Der Track SHALL den Dateinamen ohne Endung als Namen tragen. Werden mehrere Dateien gelesen, SHALL jede einen eigenen Track ergeben, in der Reihenfolge der Übergabe.
+### Requirement: Tracks of the CSV formats
+Every file read SHALL result in exactly one track with one segment if it contains at least one valid point. The track SHALL carry the file name without extension as its name. If several files are read, each SHALL result in a track of its own, in the order in which they were passed.
 
-#### Scenario: Zwei Aufzeichnungen
-- **WHEN** die Dateien `26110201.CSV` und `26110202.CSV` gemeinsam gelesen werden
-- **THEN** enthält die Aufzeichnung zwei Tracks mit den Namen `26110201` und `26110202`
+#### Scenario: Two recordings
+- **WHEN** the files `26110201.CSV` and `26110202.CSV` are read together
+- **THEN** the recording contains two tracks with the names `26110201` and `26110202`
 
-### Requirement: Erkennung der CSV-Formate
-Die Formaterkennung SHALL eine V-900-Datei daran erkennen, dass ihre erste Zeile nach dem Trimmen der Felder mit den sechs Pflichtspalten des Formats `v900` beginnt. Eine iBlue-CSV-Datei SHALL sie daran erkennen, dass die erste Zeile mit `INDEX` beginnt und alle Pflichtspalten des Formats `iblue-csv` enthält. Andere CSV-Dateien SHALL keines der beiden Formate auslösen.
+### Requirement: Detection of the CSV formats
+The format detection SHALL recognize a V-900 file by its first line starting, after trimming the fields, with the six required columns of the format `v900`. It SHALL recognize an iBlue CSV file by its first line starting with `INDEX` and containing all required columns of the format `iblue-csv`. Other CSV files SHALL trigger neither of the two formats.
 
-#### Scenario: V-900-Datei mit Endung .CSV
-- **WHEN** die Datei `26110201.CSV` eine V-900-Kopfzeile hat
-- **THEN** schlägt die Erkennung das Format `v900` vor
+#### Scenario: V-900 file with extension .CSV
+- **WHEN** the file `26110201.CSV` has a V-900 header line
+- **THEN** the detection suggests the format `v900`
 
-#### Scenario: iBlue-Datei
-- **WHEN** eine `.csv`-Datei die Kopfzeile eines iBlue-747-Exports hat
-- **THEN** schlägt die Erkennung das Format `iblue-csv` vor
+#### Scenario: iBlue file
+- **WHEN** a `.csv` file has the header line of an iBlue 747 export
+- **THEN** the detection suggests the format `iblue-csv`
 
-#### Scenario: Fremde CSV-Datei
-- **WHEN** eine `.csv`-Datei die Kopfzeile `Name,Vorname,Ort` hat
-- **THEN** lautet das Ergebnis „unbekannt“
+#### Scenario: Foreign CSV file
+- **WHEN** a `.csv` file has the header line `Name,First name,City`
+- **THEN** the result is "unknown"

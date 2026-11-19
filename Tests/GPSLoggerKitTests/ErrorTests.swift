@@ -41,7 +41,7 @@ struct ErrorTests {
         }
     }
 
-    /// Scenario "Unvollständige Binärdatei" (message part) and the wrong file checksum.
+    /// Scenario "Incomplete binary file" (message part) and the wrong file checksum.
     @Test func perFileWarningsNameOnlyTheFile() {
         let truncated = ImportWarning(kind: .truncatedFile, count: 1, fileName: "ride.fit")
         #expect(truncated.message(localization: "de") == "„ride.fit“ ist unvollständig. Nur der lesbare Anfang wurde übernommen.")

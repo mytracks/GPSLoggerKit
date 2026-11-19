@@ -35,7 +35,7 @@ struct ModelTests {
 
 @Suite("Data model – quality")
 struct ModelQualityTests {
-    /// Scenario "Punkt nur mit Koordinaten".
+    /// Scenario "Point with coordinates only".
     @Test func pointWithOnlyCoordinatesHasNoOtherValues() {
         let point = TrackPoint(latitude: 51.7, longitude: 8.6)
         #expect(point.elevation == nil)

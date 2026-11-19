@@ -43,7 +43,7 @@ private let noProcessing = ImportOptions(correctWeekRollover: false)
 
 @Suite("File format contract")
 struct FileFormatTests {
-    /// Scenario "Katalog abfragen".
+    /// Scenario "Query the catalog".
     @Test func catalogContainsAllFormats() {
         let ids = FileFormats.all.map(\.id)
         #expect(ids == [.nmea, .gpx, .igc, .fit, .tcx, .suuntoSML, .kml, .v900, .iblueCSV])
@@ -65,14 +65,14 @@ struct FileFormatTests {
         }
     }
 
-    /// Scenario "Zwei Dateien".
+    /// Scenario "Two files".
     @Test func twoFilesAreReadInTheGivenOrder() throws {
         let result = try FileFormats.readSynchronously([input("b", "LINES\n2,2\n"), input("a", "LINES\n1,1\n")],
                                                        format: LineFormat(), options: noProcessing)
         #expect(result.recording.tracks[0].segments[0].points.map(\.latitude) == [2, 1])
     }
 
-    /// Scenario "Teilweise beschädigte Datei".
+    /// Scenario "Partly damaged file".
     @Test func damagedRecordsBecomeOneWarning() throws {
         let text = "LINES\n" + String(repeating: "1,2\n", count: 1000) + "#\n#\n#\n"
         let result = try FileFormats.readSynchronously([input("f.lines", text)], format: LineFormat(), options: noProcessing)
@@ -80,7 +80,7 @@ struct FileFormatTests {
         #expect(result.warnings == [ImportWarning(kind: .malformedRecord, count: 3, fileName: "f.lines", firstLine: 1002)])
     }
 
-    /// Scenario "Leere Datei".
+    /// Scenario "Empty file".
     @Test func emptyFileIsAnError() {
         #expect {
             try FileFormats.readSynchronously([input("leer.nmea", "")], format: LineFormat())
@@ -98,7 +98,7 @@ struct FileFormatTests {
         }
     }
 
-    /// Scenario "Unbekannter Inhalt".
+    /// Scenario "Unknown content".
     @Test func jpegIsUnknown() {
         let jpeg = Data([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00]) + Data(count: 500)
         #expect(FileFormats.detect(prefix: jpeg, fileName: "photo.jpg") == nil)
@@ -134,7 +134,7 @@ struct CancellationTests {
         #expect(throws: CancellationError.self) { try result.get() }
     }
 
-    /// Scenario "Große Datei abbrechen": NMEA and GPX stop soon after cancellation, without a partial result.
+    /// Scenario "Cancel a large file": NMEA and GPX stop soon after cancellation, without a partial result.
     @Test func nmeaAndGPXStopSoonAfterCancellation() async throws {
         let nmea = input("big.nmea", String(repeating: "$GPGGA,120000,5144.4694,N,00840.8580,E,1,08,0.9,94.5,M,47.0,M,,\n", count: 600_000))
         let gpx = input("big.gpx", "<gpx>" + String(repeating: "<wpt lat=\"1\" lon=\"2\"/>", count: 600_000) + "</gpx>")
@@ -155,7 +155,7 @@ struct ProcessingTests {
         UTCTime.date(year: y, month: m, day: d, hour: 12)!
     }
 
-    /// Scenario "Logger mit Wochenüberlauf".
+    /// Scenario "Logger with week rollover".
     @Test func weekRolloverIsCorrected() {
         let recording = Recording(tracks: [Track(segments: [TrackSegment(points: [
             TrackPoint(latitude: 1, longitude: 2, time: date(2007, 3, 15)),
@@ -175,7 +175,7 @@ struct ProcessingTests {
         #expect(RecordingProcessing.corrected(old, reference: date(2026, 11, 3)) == date(2026, 10, 29))
     }
 
-    /// Scenario "Korrektur abgeschaltet".
+    /// Scenario "Correction switched off".
     @Test func correctionCanBeSwitchedOff() throws {
         let nmea = "$GPRMC,120000,A,5144.4694,N,00840.8580,E,0.0,0.0,150307,,,A\n"
         let options = ImportOptions(correctWeekRollover: false, referenceDate: date(2026, 11, 3))
@@ -186,7 +186,7 @@ struct ProcessingTests {
         #expect(on.recording.tracks[0].segments[0].points[0].time == date(2026, 10, 29))
     }
 
-    /// Scenario "Datei nur mit Wegpunkten".
+    /// Scenario "File with waypoints only".
     @Test func waypointsBecomeATrack() throws {
         var gpx = "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\">"
         for i in 0..<20 { gpx += "<wpt lat=\"\(i)\" lon=\"\(i)\"><name>W\(i)</name></wpt>" }
@@ -218,7 +218,7 @@ struct ProvenanceTests {
         Set(text.split(separator: "\n").filter { $0.hasPrefix("## ") }.map { String($0.dropFirst(3)).trimmingCharacters(in: .whitespaces) })
     }
 
-    /// Every format in the catalog has a section in PROVENANCE.md (spec `logger-kit`, "Herkunftsnachweis").
+    /// Every format in the catalog has a section in PROVENANCE.md (spec `logger-kit`, "Provenance record").
     /// Reads the file from the source tree, so it is skipped on a physical device.
     @Test(.enabled(if: FileManager.default.fileExists(atPath: provenanceURL.path)))
     func everyFormatHasAProvenanceSection() throws {

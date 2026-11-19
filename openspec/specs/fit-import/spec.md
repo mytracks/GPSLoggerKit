@@ -1,120 +1,120 @@
 # fit-import Specification
 
 ## Purpose
-Liest Garmin-FIT-Dateien von Sportuhren, Fahrradcomputern und Apps nach dem öffentlichen FIT-Protokoll ein. Aus Aktivitäten entstehen Tracks, aus Kursdateien Tracks und Wegpunkte, ohne gpsbabel.
+Reads Garmin FIT files of sports watches, bike computers and apps according to the public FIT protocol. Activities become tracks, course files become tracks and waypoints, without gpsbabel.
 
 ## Requirements
 
-### Requirement: Dateiaufbau
-Der Import SHALL FIT-Dateien nach dem FIT-Protokoll lesen:
-- **Dateikopf:** 12 oder 14 Byte mit der Kennung `.FIT` und der Länge des Datenbereichs.
-- **Nachrichten:** Definitions- und Datennachrichten in Little- und Big-Endian, auch Datennachrichten mit komprimiertem Zeitstempel.
-- **Verkettung:** Folgen nach der abschließenden Prüfsumme weitere FIT-Dateien, SHALL der Import auch diese lesen.
+### Requirement: File structure
+The import SHALL read FIT files according to the FIT protocol:
+- **File header:** 12 or 14 bytes with the signature `.FIT` and the length of the data section.
+- **Messages:** definition and data messages in little and big endian, also data messages with a compressed timestamp.
+- **Chaining:** if further FIT files follow after the final checksum, the import SHALL read them too.
 
-#### Scenario: Big-Endian-Definition
-- **WHEN** eine Datei eine `record`-Nachricht mit Big-Endian-Definition enthält
-- **THEN** werden Position und Zeit genauso gelesen wie bei Little-Endian
+#### Scenario: Big-endian definition
+- **WHEN** a file contains a `record` message with a big-endian definition
+- **THEN** position and time are read just as with little endian
 
-#### Scenario: Komprimierter Zeitstempel
-- **WHEN** auf eine `record`-Nachricht mit dem Zeitstempel T eine Nachricht mit komprimiertem Zeitstempel und dem Versatz 3 folgt
-- **THEN** hat der zweite Punkt die Zeit T + 3 s
+#### Scenario: Compressed timestamp
+- **WHEN** a `record` message with the timestamp T is followed by a message with a compressed timestamp and the offset 3
+- **THEN** the second point has the time T + 3 s
 
-#### Scenario: Verkettete Dateien
-- **WHEN** zwei vollständige FIT-Dateien direkt hintereinander in einer Datei stehen
-- **THEN** enthält das Ergebnis die Punkte beider Teile
+#### Scenario: Chained files
+- **WHEN** two complete FIT files follow each other directly in one file
+- **THEN** the result contains the points of both parts
 
-### Requirement: Unbekannte Inhalte
-Unbekannte Nachrichten und Felder, Entwicklerfelder und Felder, die größer sind als im Profil, SHALL anhand ihrer Größe ohne Warnung übersprungen werden. Felder mit dem Ungültigkeitswert ihres Basistyps SHALL als fehlend gelten.
+### Requirement: Unknown content
+Unknown messages and fields, developer fields and fields that are larger than in the profile SHALL be skipped by their size without a warning. Fields with the invalid value of their base type SHALL count as missing.
 
-#### Scenario: Entwicklerfelder
-- **WHEN** eine Definition zusätzlich Entwicklerfelder enthält
-- **THEN** werden diese übersprungen, und die übrigen Felder der Nachricht werden richtig gelesen
+#### Scenario: Developer fields
+- **WHEN** a definition additionally contains developer fields
+- **THEN** they are skipped, and the other fields of the message are read correctly
 
-#### Scenario: Ungültige Höhe
-- **WHEN** das Feld `altitude` einer `record`-Nachricht den Wert 0xFFFF hat
-- **THEN** hat der Punkt keine Höhe
+#### Scenario: Invalid altitude
+- **WHEN** the field `altitude` of a `record` message has the value 0xFFFF
+- **THEN** the point has no elevation
 
-### Requirement: Trackpunkte
-Jede `record`-Nachricht mit gültiger Breite und Länge SHALL einen Trackpunkt ergeben:
-- **Position:** aus Semicircles in Grad umgerechnet (Faktor 180 / 2³¹).
-- **Zeit:** UTC aus dem Zeitstempel (Sekunden ab dem 31.12.1989, 00:00 UTC). Werte unter 0x10000000 sind relative Gerätezeit; der Punkt SHALL dann keine Zeit haben, und eine Warnung zählt ihn.
-- **Höhe:** `enhanced_altitude`, sonst `altitude`.
-- **Geschwindigkeit:** `enhanced_speed`, sonst `speed`, in m/s.
+### Requirement: Track points
+Every `record` message with a valid latitude and longitude SHALL result in a track point:
+- **Position:** converted from semicircles to degrees (factor 180 / 2³¹).
+- **Time:** UTC from the timestamp (seconds since 31 December 1989, 00:00 UTC). Values below 0x10000000 are relative device time; the point SHALL then have no time, and a warning counts it.
+- **Elevation:** `enhanced_altitude`, else `altitude`.
+- **Speed:** `enhanced_speed`, else `speed`, in m/s.
 
-#### Scenario: Punkt umrechnen
-- **WHEN** eine `record`-Nachricht die Werte `position_lat` 536870912, `position_long` −1073741824, `altitude` 3000 und `timestamp` 1100000000 enthält
-- **THEN** entsteht ein Punkt bei 45° Nord und 90° West, auf 100 m Höhe und mit der Zeit 2024-11-08 11:33:20 UTC
+#### Scenario: Convert a point
+- **WHEN** a `record` message contains the values `position_lat` 536870912, `position_long` −1073741824, `altitude` 3000 and `timestamp` 1100000000
+- **THEN** a point at 45° north and 90° west results, at 100 m elevation and with the time 2024-11-08 11:33:20 UTC
 
-#### Scenario: Erweiterte Höhe
-- **WHEN** eine `record`-Nachricht `altitude` und `enhanced_altitude` enthält
-- **THEN** wird `enhanced_altitude` verwendet
+#### Scenario: Enhanced altitude
+- **WHEN** a `record` message contains `altitude` and `enhanced_altitude`
+- **THEN** `enhanced_altitude` is used
 
-#### Scenario: Relative Gerätezeit
-- **WHEN** ein Zeitstempel kleiner als 0x10000000 ist
-- **THEN** hat der Punkt keine Zeit, und eine Warnung zählt die Punkte ohne Datum
+#### Scenario: Relative device time
+- **WHEN** a timestamp is smaller than 0x10000000
+- **THEN** the point has no time, and a warning counts the points without a date
 
-### Requirement: Nachrichten ohne gültige Position
-`record`-Nachrichten ohne Position SHALL ohne Warnung übergangen werden, etwa wenn nur Sensordaten aufgezeichnet sind. Eine Position außerhalb des gültigen Bereichs MUST verworfen und als Warnung gezählt werden.
+### Requirement: Messages without a valid position
+`record` messages without a position SHALL be skipped without a warning, for example when only sensor data is recorded. A position outside the valid range MUST be discarded and counted as a warning.
 
-#### Scenario: Nur Herzfrequenz
-- **WHEN** eine `record`-Nachricht keine Position, aber eine Herzfrequenz enthält
-- **THEN** entsteht kein Punkt und keine Warnung
+#### Scenario: Heart rate only
+- **WHEN** a `record` message contains no position but a heart rate
+- **THEN** neither a point nor a warning results
 
-#### Scenario: Breite außerhalb des Bereichs
-- **WHEN** `position_lat` mehr als 90° entspricht
-- **THEN** entsteht kein Punkt, und eine Warnung zählt die Nachricht
+#### Scenario: Latitude out of range
+- **WHEN** `position_lat` corresponds to more than 90°
+- **THEN** no point results, and a warning counts the message
 
-### Requirement: Tracks und Segmente
-Jede FIT-Datei SHALL einen Track ergeben. Enthält die Datei eine `course`-Nachricht mit Namen, SHALL der Track so heißen, sonst wie die Datei ohne Endung. Ein Timer-Stopp (`event` `timer` mit dem Typ `stop` oder `stop_all`) SHALL das laufende Segment beenden; Punkte nach dem nächsten Start SHALL in ein neues Segment kommen. Segmente ohne Punkte SHALL entfallen.
+### Requirement: Tracks and segments
+Every FIT file SHALL result in one track. If the file contains a `course` message with a name, the track SHALL carry this name, otherwise the file name without extension. A timer stop (`event` `timer` with the type `stop` or `stop_all`) SHALL end the current segment; points after the next start SHALL go into a new segment. Segments without points SHALL be dropped.
 
-#### Scenario: Pause in einer Aktivität
-- **WHEN** eine Aktivität 10 Punkte enthält, danach einen Timer-Stopp, einen Timer-Start und weitere 5 Punkte
-- **THEN** hat der Track zwei Segmente mit 10 und 5 Punkten
+#### Scenario: Pause in an activity
+- **WHEN** an activity contains 10 points, then a timer stop, a timer start and 5 more points
+- **THEN** the track has two segments with 10 and 5 points
 
-#### Scenario: Kursdatei
-- **WHEN** eine Kursdatei die `course`-Nachricht mit dem Namen „Runde Alster“ enthält
-- **THEN** heißt der Track „Runde Alster“
+#### Scenario: Course file
+- **WHEN** a course file contains the `course` message with the name "Alster loop"
+- **THEN** the track is called "Alster loop"
 
-#### Scenario: Zwei Dateien
-- **WHEN** zwei FIT-Dateien gemeinsam eingelesen werden
-- **THEN** enthält die Aufzeichnung zwei Tracks in der Reihenfolge der Übergabe
+#### Scenario: Two files
+- **WHEN** two FIT files are read together
+- **THEN** the recording contains two tracks in the order in which they were passed
 
-### Requirement: Kurspunkte
-Jede `course_point`-Nachricht mit gültiger Position SHALL einen Wegpunkt ergeben, mit Name und, falls vorhanden, Zeit.
+### Requirement: Course points
+Every `course_point` message with a valid position SHALL result in a waypoint, with a name and, if present, a time.
 
-#### Scenario: Kurspunkt
-- **WHEN** eine Kursdatei einen `course_point` mit dem Namen „Wende“ enthält
-- **THEN** enthält die Aufzeichnung einen Wegpunkt „Wende“ an dieser Position
+#### Scenario: Course point
+- **WHEN** a course file contains a `course_point` with the name "Turn"
+- **THEN** the recording contains a waypoint "Turn" at this position
 
-### Requirement: Unvollständige Dateien
-Kann eine Datei nicht bis zum Ende dekodiert werden, SHALL die Aufzeichnung alle Punkte bis zur beschädigten Stelle enthalten, und eine Warnung MUST das melden. Das gilt, wenn die Datei kürzer ist als im Kopf angegeben, eine Nachricht über das Dateiende hinausreicht oder eine Datennachricht auf eine nicht definierte lokale Nachrichtenart verweist.
+### Requirement: Incomplete files
+If a file cannot be decoded to its end, the recording SHALL contain all points up to the damaged place, and a warning MUST report that. This applies when the file is shorter than stated in the header, a message reaches beyond the end of the file or a data message refers to an undefined local message type.
 
-#### Scenario: Abgeschnittene Aktivität
-- **WHEN** eine Datei mit 100 Punkten nach dem 60. Punkt mitten in einer Nachricht endet
-- **THEN** enthält der Track 60 Punkte, und eine Warnung meldet die unvollständige Datei
+#### Scenario: Truncated activity
+- **WHEN** a file with 100 points ends after the 60th point in the middle of a message
+- **THEN** the track contains 60 points, and a warning reports the incomplete file
 
-#### Scenario: Undefinierte Nachrichtenart
-- **WHEN** nach 10 Punkten eine Datennachricht ohne vorherige Definition ihrer lokalen Art folgt
-- **THEN** enthält der Track 10 Punkte, und eine Warnung meldet den beschädigten Datensatz
+#### Scenario: Undefined message type
+- **WHEN** after 10 points a data message follows without a previous definition of its local type
+- **THEN** the track contains 10 points, and a warning reports the damaged record
 
-### Requirement: Prüfsummen und Kopf
-Stimmt die Prüfsumme des Kopfs oder der Datei nicht, SHALL der Inhalt trotzdem gelesen werden, und eine Warnung MUST das melden. Ist der Kopf selbst ungültig, MUST das Einlesen mit einem Fehler enden.
+### Requirement: Checksums and header
+If the checksum of the header or of the file is wrong, the content SHALL be read anyway, and a warning MUST report that. If the header itself is invalid, reading MUST end with an error.
 
-#### Scenario: Falsche Prüfsumme
-- **WHEN** die Prüfsumme am Ende der Datei nicht stimmt
-- **THEN** werden alle Punkte gelesen, und eine Warnung meldet die falsche Prüfsumme
+#### Scenario: Wrong checksum
+- **WHEN** the checksum at the end of the file is wrong
+- **THEN** all points are read, and a warning reports the wrong checksum
 
-#### Scenario: Ungültiger Kopf
-- **WHEN** der Kopf eine Länge von 20 Byte angibt
-- **THEN** endet das Einlesen mit einem Fehler, der die Datei nennt
+#### Scenario: Invalid header
+- **WHEN** the header states a length of 20 bytes
+- **THEN** reading ends with an error that names the file
 
-### Requirement: Erkennung
-Eine Datei SHALL als FIT erkannt werden, wenn ihr erstes Byte 12 oder 14 ist und die Bytes 8 bis 11 `.FIT` lauten. Die Dateiendung `.fit` SHALL nur als Hinweis dienen.
+### Requirement: Detection
+A file SHALL be recognized as FIT if its first byte is 12 or 14 and the bytes 8 to 11 are `.FIT`. The file extension `.fit` SHALL only serve as a hint.
 
-#### Scenario: Endung fehlt
-- **WHEN** eine FIT-Datei ohne Endung übergeben wird
-- **THEN** schlägt die Erkennung FIT vor
+#### Scenario: Extension missing
+- **WHEN** a FIT file without an extension is passed
+- **THEN** the detection suggests FIT
 
-#### Scenario: Andere Binärdatei
-- **WHEN** eine Binärdatei mit der Endung `.fit` an den Bytes 8 bis 11 nicht `.FIT` enthält
-- **THEN** wird sie nicht als FIT erkannt
+#### Scenario: Other binary file
+- **WHEN** a binary file with the extension `.fit` does not contain `.FIT` at the bytes 8 to 11
+- **THEN** it is not recognized as FIT

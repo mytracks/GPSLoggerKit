@@ -37,7 +37,7 @@ private func fixture(_ name: String) throws -> FileInput {
 
 @Suite("Suunto SML import")
 struct SuuntoTests {
-    /// Scenario "GPS-Probe umrechnen".
+    /// Scenario "Convert a GPS sample".
     @Test func gpsSampleIsConverted() throws {
         let result = try read(sml(gps(extra: "<GPSHeading>3.141592653589793</GPSHeading><NumberOfSatellites>12</NumberOfSatellites>"
                                          + "<GPSSpeed>1.5</GPSSpeed><GpsHDOP>0.7</GpsHDOP>")))
@@ -53,21 +53,21 @@ struct SuuntoTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Periodische Probe".
+    /// Scenario "Periodic sample".
     @Test func periodicSampleGivesNoPoint() throws {
         let result = try read(sml(periodic(altitude: 7, utc: "2026-05-01T08:00:00Z")))
         #expect(result.recording.isEmpty)
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Barometrische Höhe".
+    /// Scenario "Barometric altitude".
     @Test func recentBarometricAltitudeWins() throws {
         let result = try read(sml(periodic(altitude: 118, utc: "2026-05-01T07:59:50Z")
                                   + gps(extra: "<GPSAltitude>130</GPSAltitude>")))
         #expect(points(result).first?.elevation == 118)
     }
 
-    /// Scenario "Nur GPS-Höhe".
+    /// Scenario "GPS altitude only".
     @Test func oldBarometricAltitudeIsNotUsed() throws {
         let result = try read(sml(periodic(altitude: 118, utc: "2026-05-01T07:58:59Z")
                                   + gps(extra: "<GPSAltitude>130</GPSAltitude>")))
@@ -75,20 +75,20 @@ struct SuuntoTests {
         #expect(points(try read(sml(gps()))).first?.elevation == nil)
     }
 
-    /// Scenario "Aufzeichnung mit Pause".
+    /// Scenario "Recording with a pause".
     @Test func pausesSplitSegments() throws {
         let samples = String(repeating: gps(), count: 20) + pause("True") + pause("False") + String(repeating: gps(), count: 10)
         let result = try read(sml(samples))
         #expect(result.recording.tracks[0].segments.map(\.points.count) == [20, 10])
     }
 
-    /// Scenario "Startereignis".
+    /// Scenario "Start event".
     @Test func startEventGivesNoEmptySegment() throws {
         let result = try read(sml(pause("False") + gps() + gps() + pause("True")))
         #expect(result.recording.tracks[0].segments.map(\.points.count) == [2])
     }
 
-    /// Scenario "Ungültige Breite" and unreadable numbers.
+    /// Scenario "Invalid latitude" and unreadable numbers.
     @Test func damagedSamplesAreWarnings() throws {
         let result = try read(sml(gps() + gps(lat: "2.0") + gps(lon: "abc")))
         #expect(points(result).count == 1)
@@ -122,7 +122,7 @@ struct SuuntoTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Abgeschnittene Datei".
+    /// Scenario "Truncated file".
     @Test func truncatedFileIsAnErrorWithLine() throws {
         let text = String(decoding: try fixture("ambit.sml").data, as: UTF8.self)
         let truncated = String(text.prefix(text.count / 2))
@@ -134,7 +134,7 @@ struct SuuntoTests {
         }
     }
 
-    /// Scenario "SML mit Endung .xml".
+    /// Scenario "SML with extension .xml".
     @Test func detection() throws {
         let data = try fixture("ambit.xml").data
         #expect(FileFormats.detect(prefix: data, fileName: "ambit.xml")?.id == .suuntoSML)

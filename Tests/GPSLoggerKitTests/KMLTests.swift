@@ -42,7 +42,7 @@ private func gpsbabelTrack(name: String, segments: [[(Double, Double)]], points:
 
 @Suite("KML – paths and tracks")
 struct KMLPathTests {
-    /// Scenario "Einfacher Pfad".
+    /// Scenario "Simple path".
     @Test func simplePath() throws {
         let coordinates = (0..<100).map { "8,\(50 + Double($0) / 1000),100" }.joined(separator: " ")
         let result = try read(kml(path(coordinates, name: "Runde")))
@@ -51,21 +51,21 @@ struct KMLPathTests {
         #expect(points(result).allSatisfy { $0.time == nil })
     }
 
-    /// Scenario "Pfad aus mehreren Teilen".
+    /// Scenario "Path of several parts".
     @Test func multiGeometry() throws {
         let line = "<LineString><coordinates>8,50 8,50.001 8,50.002</coordinates></LineString>"
         let result = try read(kml("<Placemark><MultiGeometry>\(line)\(line)</MultiGeometry></Placemark>"))
         #expect(result.recording.tracks.map { $0.segments.map(\.points.count) } == [[3, 3]])
     }
 
-    /// Scenario "Google-Mehrfachtrack".
+    /// Scenario "Google multi-track".
     @Test func multiTrack() throws {
         let track = "<gx:Track><when>2026-05-01T08:00:00Z</when><gx:coord>8 50 0</gx:coord></gx:Track>"
         let result = try read(kml("<Placemark><gx:MultiTrack>\(track)\(track)</gx:MultiTrack></Placemark>"))
         #expect(result.recording.tracks.map { $0.segments.count } == [2])
     }
 
-    /// Scenario "Track mit Zeiten".
+    /// Scenario "Track with times".
     @Test func trackWithTimes() throws {
         let body = "<Placemark><gx:Track><when>2026-05-01T08:00:00Z</when><when>2026-05-01T08:00:10Z</when>"
             + "<gx:coord>8 50 120</gx:coord><gx:coord>8.001 50.001 121</gx:coord></gx:Track></Placemark>"
@@ -78,7 +78,7 @@ struct KMLPathTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Zu wenige Zeiten"; an unreadable time counts like a missing one.
+    /// Scenario "Too few times"; an unreadable time counts like a missing one.
     @Test func tooFewTimes() throws {
         let body = "<Placemark><gx:Track><when>2026-05-01T08:00:00Z</when><when>gestern</when>"
             + "<gx:coord>8 50 1</gx:coord><gx:coord>8 50.001 1</gx:coord><gx:coord>8 50.002 1</gx:coord></gx:Track></Placemark>"
@@ -94,7 +94,7 @@ struct KMLPathTests {
         #expect(result.warnings.map(\.kind) == [.missingTimes])
     }
 
-    /// Scenario "Export aus myTracks".
+    /// Scenario "Export from myTracks".
     @Test func pathWithoutTimesGivesOneWarning() throws {
         let coordinates = (0..<500).map { "8,\(50 + Double($0) / 10000),100" }.joined(separator: "\n")
         let result = try read(kml(path(coordinates) + path("8,51 8,51.1")))
@@ -102,14 +102,14 @@ struct KMLPathTests {
         #expect(result.warnings == [ImportWarning(kind: .missingTimes, count: 1, fileName: "tour.kml")])
     }
 
-    /// Scenario "Reihenfolge Länge, Breite"; white space after a comma is tolerated.
+    /// Scenario "Order longitude, latitude"; white space after a comma is tolerated.
     @Test func longitudeComesFirst() throws {
         let result = try read(kml(path("8.5,50.25,100   8.5, 50.5 ,101")))
         #expect(points(result).map(\.latitude) == [50.25, 50.5])
         #expect(points(result).map(\.longitude) == [8.5, 8.5])
     }
 
-    /// Scenario "Ungültige Breite" and unreadable tuples.
+    /// Scenario "Invalid latitude" and unreadable tuples.
     @Test func damagedTuplesAreWarnings() throws {
         let result = try read(kml(path("8,50 8,95 abc,50 8 8,50,x 8,50,1,2 8,50.1")))
         #expect(points(result).count == 2)
@@ -118,7 +118,7 @@ struct KMLPathTests {
         #expect(kinds[.malformedRecord] == 4)
     }
 
-    /// Scenario "Abgeschnittene Datei".
+    /// Scenario "Truncated file".
     @Test func truncatedFileIsAnErrorWithLine() {
         let text = kml(path("8,50 8,50.1 8,50.2"))
         let truncated = String(text.prefix(text.count - 60))
@@ -149,14 +149,14 @@ struct KMLPathTests {
 
 @Suite("KML – altitude, names and waypoints")
 struct KMLDetailTests {
-    /// Scenario "Export ohne Höhenbezug".
+    /// Scenario "Export without altitude reference".
     @Test func altitudeWithoutMode() throws {
         #expect(points(try read(kml(path("8,50,100 8,50.1,101 8,50.2,102")))).map(\.elevation) == [100, 101, 102])
         let absolute = path("8,50,100 8,50.1,0", extra: "<altitudeMode>absolute</altitudeMode>")
         #expect(points(try read(kml(absolute))).map(\.elevation) == [100, 0])
     }
 
-    /// Scenario "Am Boden" and the other explicit references.
+    /// Scenario "On the ground" and the other explicit references.
     @Test func groundReferenceDropsAltitude() throws {
         for mode in ["<altitudeMode>clampToGround</altitudeMode>", "<altitudeMode>relativeToGround</altitudeMode>",
                      "<gx:altitudeMode>clampToSeaFloor</gx:altitudeMode>", "<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>"] {
@@ -167,13 +167,13 @@ struct KMLDetailTests {
         #expect(points(try read(kml(track))).map(\.elevation) == [nil])
     }
 
-    /// Scenario "Nur Nullen".
+    /// Scenario "Only zeros".
     @Test func allZeroAltitudesAreDropped() throws {
         #expect(points(try read(kml(path("8,50,0 8,50.1,0")))).map(\.elevation) == [nil, nil])
         #expect(points(try read(kml(path("8,50 8,50.1")))).map(\.elevation) == [nil, nil])
     }
 
-    /// Scenario "Track aus gpsbabel" (name part) and scenario "Pfad ohne Namen".
+    /// Scenario "Track from gpsbabel" (name part) and scenario "Path without a name".
     @Test func trackNames() throws {
         let fromFolder = try read(kml("<Folder><name>Morgenrunde</name>\(path("8,50 8,50.1", name: "Path"))</Folder>"))
         #expect(fromFolder.recording.tracks.map(\.name) == ["Morgenrunde"])
@@ -192,7 +192,7 @@ struct KMLDetailTests {
         #expect(try read(kml(body)).recording.tracks.map(\.name) == ["tour"])
     }
 
-    /// Scenario "Markierung mit Beschreibung".
+    /// Scenario "Marker with description".
     @Test func waypointWithDescription() throws {
         let body = "<Placemark><name>Hütte</name><description>Rast</description><Point><coordinates>8.1,50.2,300</coordinates></Point></Placemark>"
         let result = try read(kml(body))
@@ -201,7 +201,7 @@ struct KMLDetailTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Zeitgestempelte Punkte"; an unreadable waypoint time is dropped silently.
+    /// Scenario "Time-stamped points"; an unreadable waypoint time is dropped silently.
     @Test func timestampedPointsStayWaypoints() throws {
         let marks = (0..<5).map { "<Placemark><name>F\($0)</name><TimeStamp><when>2026-05-01T08:0\($0):00Z</when></TimeStamp><Point><coordinates>8,50.\($0)</coordinates></Point></Placemark>" }
         let result = try read(kml("<Folder><name>Fotos</name>\(marks.joined())</Folder>"
@@ -213,7 +213,7 @@ struct KMLDetailTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Gebietsgrenze".
+    /// Scenario "Area boundary".
     @Test func polygonIsIgnored() throws {
         let polygon = "<Placemark><name>Gebiet</name><Polygon><outerBoundaryIs><LinearRing><coordinates>8,50 9,50 9,51 8,50</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>"
         let result = try read(kml(polygon + path("8,50 8,50.1", name: "Weg")))
@@ -222,7 +222,7 @@ struct KMLDetailTests {
         #expect(result.warnings.map(\.kind) == [.missingTimes])
     }
 
-    /// Scenario "Netzwerk-Link".
+    /// Scenario "Network link".
     @Test func networkLinkIsNotFetched() {
         let body = "<NetworkLink><name>Live</name><Link><href>http://127.0.0.1:9/tracks.kml</href></Link></NetworkLink>"
         #expect {
@@ -232,7 +232,7 @@ struct KMLDetailTests {
         }
     }
 
-    /// Scenario "Alte Google-Earth-Datei" and a file without namespace.
+    /// Scenario "Old Google Earth file" and a file without namespace.
     @Test func namespaces() throws {
         let body = path("8,50,100 8,50.1,101", name: "Alt") + "<Placemark><name>P</name><Point><coordinates>8,50</coordinates></Point></Placemark>"
         let reference = try read(kml(body)).recording
@@ -260,7 +260,7 @@ struct KMLPointsFolderTests {
         (0..<count).map { String(format: "2026-05-01T08:00:%02dZ", $0 * 5) }
     }
 
-    /// Scenario "Standardausgabe von gpsbabel".
+    /// Scenario "Standard output of gpsbabel".
     @Test func gpsbabelOutputGetsTimes() throws {
         let all = segments.flatMap { $0 }
         let marks = zip(all, stamps(6)).map { ($0.0, $0.1, $1) }
@@ -272,7 +272,7 @@ struct KMLPointsFolderTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Punkte passen nicht".
+    /// Scenario "Points do not match".
     @Test func mismatchingCountKeepsWaypoints() throws {
         let all = segments.flatMap { $0 }
         let marks = zip(all.prefix(5), stamps(5)).map { ($0.0, $0.1, $1) }
@@ -304,7 +304,7 @@ struct KMLPointsFolderTests {
 
 @Suite("KML – detection")
 struct KMLDetectionTests {
-    /// Scenario "KML mit Endung .xml".
+    /// Scenario "KML with extension .xml".
     @Test func kmlWithXMLExtension() {
         let data = Data(kml(path("8,50")).utf8)
         #expect(FileFormats.detect(prefix: data, fileName: "export.xml")?.id == .kml)
@@ -317,7 +317,7 @@ struct KMLDetectionTests {
         #expect(FileFormats.detect(prefix: Data(archive.bytes()), fileName: "tour.zip")?.id == .kml)
     }
 
-    /// Scenario "Anderes ZIP-Archiv".
+    /// Scenario "Other ZIP archive".
     @Test func otherZIPIsNotKML() {
         let docx = KMZTestFile(entries: [KMZTestFile.Entry("[Content_Types].xml", "<Types/>"), KMZTestFile.Entry("word/document.xml", "<w:document/>")])
         #expect(!KMLFileFormat().matches(prefix: Data(docx.bytes())))

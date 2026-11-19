@@ -18,7 +18,7 @@ struct GPXQualityOutputTests {
         )
     }
 
-    /// Scenario "Punkt mit Qualitätsangaben".
+    /// Scenario "Point with quality data".
     @Test func qualityValuesInSchemaOrder() throws {
         let text = writer.document(for: recording, createdAt: t0)
         let expected = [
@@ -38,7 +38,7 @@ struct GPXQualityOutputTests {
         #endif
     }
 
-    /// Scenario "Geschwindigkeit wird nicht ausgegeben".
+    /// Scenario "Speed is not written".
     @Test func speedAndCourseAreNotWritten() {
         let text = writer.document(for: recording, createdAt: t0)
         #expect(!text.contains("speed"))

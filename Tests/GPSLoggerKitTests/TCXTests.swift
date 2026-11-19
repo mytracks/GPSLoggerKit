@@ -32,7 +32,7 @@ private func fixture(_ name: String) throws -> FileInput {
 
 @Suite("TCX import")
 struct TCXTests {
-    /// Scenario "Zwei Runden".
+    /// Scenario "Two laps".
     @Test func lapsBecomeSegments() throws {
         let points = (0..<10).map { trackpoint($0) }.joined()
         let result = try read(tcx("<Activities>\(activity([points, points]))</Activities>"))
@@ -41,7 +41,7 @@ struct TCXTests {
         #expect(result.recording.tracks[0].name == nil)
     }
 
-    /// Scenario "Zwei Aktivitäten".
+    /// Scenario "Two activities".
     @Test func activitiesBecomeTracksInOrder() throws {
         let first = activity([trackpoint(1)])
         let second = activity([trackpoint(2) + trackpoint(3)])
@@ -49,7 +49,7 @@ struct TCXTests {
         #expect(result.recording.tracks.map(\.pointCount) == [1, 2])
     }
 
-    /// Scenarios "Punkt mit Geschwindigkeit", "Pause ohne Position", "Workout" (fixture).
+    /// Scenarios "Point with speed", "Pause without position", "Workout" (fixture).
     @Test func activityFixture() throws {
         let result = try TCXFileFormat().read([fixture("activity.tcx")])
         let track = try #require(result.recording.tracks.first)
@@ -65,7 +65,7 @@ struct TCXTests {
         #expect(result.warnings.isEmpty)
     }
 
-    /// Scenario "Ungültige Breite".
+    /// Scenario "Invalid latitude".
     @Test func invalidLatitudeIsAWarning() throws {
         let result = try read(tcx("<Activities>\(activity([trackpoint(1) + trackpoint(2, lat: "95")]))</Activities>"))
         #expect(result.recording.trackPointCount == 1)
@@ -78,14 +78,14 @@ struct TCXTests {
         #expect(result.warnings.map(\.kind) == [.malformedRecord])
     }
 
-    /// Scenario "Fehlende Zeit".
+    /// Scenario "Missing time".
     @Test func missingTimeIsAWarning() throws {
         let result = try read(tcx("<Activities>\(activity([trackpoint(1, time: nil)]))</Activities>"))
         #expect(result.recording.tracks[0].segments[0].points[0].time == nil)
         #expect(result.warnings.map(\.kind) == [.missingDate])
     }
 
-    /// Scenario "Kurs mit Kurspunkten".
+    /// Scenario "Course with course points".
     @Test func courseFixture() throws {
         let result = try TCXFileFormat().read([fixture("course.tcx")])
         #expect(result.recording.tracks.map(\.name) == ["Elbe"])
@@ -114,7 +114,7 @@ struct TCXTests {
         #expect(try read(text).recording.trackPointCount == 1)
     }
 
-    /// Scenario "Abgeschnittene Datei".
+    /// Scenario "Truncated file".
     @Test func truncatedFileIsAnErrorWithLine() {
         let text = tcx("<Activities>\(activity([trackpoint(1)]))</Activities>")
         let truncated = String(text.prefix(text.count - 120)).replacingOccurrences(of: "><", with: ">\n<")
@@ -130,7 +130,7 @@ struct TCXTests {
         #expect(throws: GPSLoggerError.self) { try read("<gpx></gpx>") }
     }
 
-    /// Scenarios "TCX mit Endung .xml" and "GPX bleibt GPX".
+    /// Scenarios "TCX with extension .xml" and "GPX stays GPX".
     @Test func detection() throws {
         let activity = try fixture("activity.tcx").data
         #expect(FileFormats.detect(prefix: activity, fileName: "export.xml")?.id == .tcx)

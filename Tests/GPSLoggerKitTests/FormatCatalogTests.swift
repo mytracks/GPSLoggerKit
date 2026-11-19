@@ -21,13 +21,13 @@ struct CatalogTestFormat: FileFormat {
 
 @Suite("Format catalog")
 struct FormatCatalogTests {
-    /// Spec `logger-kit`, "Standardkatalog unverändert".
+    /// Spec `logger-kit`, "Standard catalog unchanged".
     @Test func standardCatalogIsThePackageCatalog() {
         #expect(FormatCatalog.standard.all.map(\.id) == FileFormats.all.map(\.id))
         #expect(FileFormats.detect(prefix: Data("TESTFORMAT".utf8), fileName: "a.tst") == nil)
     }
 
-    /// Spec `logger-kit`, "Zusätzliches Format erkennen".
+    /// Spec `logger-kit`, "Detect an additional format".
     @Test func additionalFormatIsDetected() throws {
         let catalog = FormatCatalog.standard.adding([CatalogTestFormat()])
         let format = try #require(catalog.detect(prefix: Data("TESTFORMAT 1\n".utf8), fileName: "a.tst"))

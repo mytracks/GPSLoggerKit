@@ -129,13 +129,13 @@ private func device(_ simulator: GNS2000Simulator, ready: Bool = true) -> Simula
 
 @Suite("GNS 2000 device")
 struct GNS2000DeviceTests {
-    /// Scenario "Prüfsumme eines Befehls".
+    /// Scenario "Checksum of a command".
     @Test func commandChecksum() {
         #expect(GNS2000Sentence.command("PGNS,R") == Array("$PGNS,R*74\r\n".utf8))
         #expect(GNS2000Sentence.command("PGNS,C") == Array("$PGNS,C*65\r\n".utf8))
     }
 
-    /// Scenarios "Gerät sendet NMEA" and "Auslesen"; also "Treiber mit simuliertem Gerät" (spec `logger-kit`).
+    /// Scenarios "Device sends NMEA" and "Reading"; also "Driver with a simulated device" (spec `logger-kit`).
     @Test func readsTheMemory() async throws {
         let simulator = GNS2000Simulator()
         let connection = device(simulator)
@@ -148,7 +148,7 @@ struct GNS2000DeviceTests {
         #expect(await connection.written == [GNS2000Sentence.command("PGNS,R")])
     }
 
-    /// Scenario "Umrechnung".
+    /// Scenario "Conversion".
     @Test func conversion() throws {
         let record = GNS2000TestData.record(time: 1_793_620_800, latitude: 50.5, longitude: 8.25, height: 123)
         #expect(record.map { String(format: "%02X", $0) }.joined() == "407BE86A0300004A42000004417B0000")
@@ -159,7 +159,7 @@ struct GNS2000DeviceTests {
         #expect(GNS2000Device.point(negative).map { [$0.latitude, $0.longitude, $0.elevation ?? 0] } == [-33.5, -70.25, -12])
     }
 
-    /// Scenario "Ungültiger Fix" and empty slots.
+    /// Scenario "Invalid fix" and empty slots.
     @Test func invalidRecords() {
         #expect(GNS2000Device.point(GNS2000TestData.record(time: 1, fix: 0, latitude: 1, longitude: 1, height: 0)) == nil)
         #expect(GNS2000Device.point(GNS2000TestData.record(time: 1, fix: 5, latitude: 1, longitude: 1, height: 0)) == nil)
@@ -168,7 +168,7 @@ struct GNS2000DeviceTests {
         #expect(GNS2000Device.records(["ZZ000000", "00000000", "00000000", "00000000"]).isEmpty)  // not hex
     }
 
-    /// Scenario "Gestörte Zeile": the packet with a wrong checksum is skipped.
+    /// Scenario "Garbled line": the packet with a wrong checksum is skipped.
     @Test func corruptLineIsSkipped() async throws {
         let simulator = GNS2000Simulator()
         simulator.corruptPacket = 1
@@ -180,14 +180,14 @@ struct GNS2000DeviceTests {
         #expect(GNS2000Sentence("$GPGGA,120000,5030.000,N,00815.000,E,1,05,1.0,100.0,M,,,,*1d")?.identifier == "$GPGGA")  // lower case
     }
 
-    /// Scenario "Gerät stumm".
+    /// Scenario "Device silent".
     @Test func silentDevice() async {
         await #expect(throws: SimulatedTimeout.self) {
             try await GNS2000Device().read(device(GNS2000Simulator(), ready: false), DeviceReporter())
         }
     }
 
-    /// Scenario "Ende fehlt".
+    /// Scenario "End missing".
     @Test func missingEnd() async {
         let simulator = GNS2000Simulator()
         simulator.sendsEnd = false
@@ -196,7 +196,7 @@ struct GNS2000DeviceTests {
         }
     }
 
-    /// Scenario "Zeit springt zurück".
+    /// Scenario "Time jumps back".
     @Test func timeGoesBackwards() async throws {
         let simulator = GNS2000Simulator()
         let earlier = GNS2000TestData.start - 28 * 3600  // 2026-11-01T08:00:00Z
@@ -209,7 +209,7 @@ struct GNS2000DeviceTests {
         #expect(recording.tracks.map(\.pointCount) == [3, 2])
     }
 
-    /// Scenario "Tracknamen nach der Korrektur" (spec `device-mode`): names follow the corrected times, and the
+    /// Scenario "Track names after the correction" (spec `device-mode`): names follow the corrected times, and the
     /// jump back at the rollover in the middle of the memory does not start a new track.
     @Test func weekRolloverIsCorrectedBeforeSplitting() async throws {
         let weeks1024: UInt32 = 1024 * 7 * 86_400
@@ -241,7 +241,7 @@ struct GNS2000DeviceTests {
         #expect(times == (0..<4).map { TimeInterval(beforeRollover) + TimeInterval($0) })
     }
 
-    /// Scenario "Löschen bestätigt".
+    /// Scenario "Erasing confirmed".
     @Test func eraseConfirmed() async throws {
         let simulator = GNS2000Simulator()
         try await GNS2000Device().erase(device(simulator), DeviceReporter())
@@ -249,7 +249,7 @@ struct GNS2000DeviceTests {
         #expect(GNS2000Device().eraseSupport == .supported)
     }
 
-    /// Scenario "Gerät überhört den Befehl": resent after 11 lines without `$P`, at most five times.
+    /// Scenario "Device misses the command": resent after 11 lines without `$P`, at most five times.
     @Test func eraseIsRepeated() async throws {
         let simulator = GNS2000Simulator()
         simulator.ignoredEraseRequests = 1

@@ -1,94 +1,94 @@
 # nmea-import Specification
 
 ## Purpose
-Liest NMEA-0183-Dateien von GPS-Loggern und Kameras ein, etwa von Sony GPS CS-1/CS-3, Canon EOS LOG, AMOD und ATP. Daraus entstehen Tracks und Wegpunkte, ohne gpsbabel.
+Reads NMEA 0183 files of GPS loggers and cameras, for example of the Sony GPS CS-1/CS-3, Canon EOS LOG, AMOD and ATP. They become tracks and waypoints, without gpsbabel.
 
 ## Requirements
 
-### Requirement: Unterstützte Sätze
-Der Import SHALL die Sätze RMC, GGA, GLL, GSA, VTG, ZDA und WPL auswerten. Er SHALL dabei jeden Talker akzeptieren, insbesondere GP, GN, GL, GA, GB, BD und GQ. Andere Sätze, etwa GSV und proprietäre `$P…`-Sätze, SHALL er ohne Warnung ignorieren.
+### Requirement: Supported sentences
+The import SHALL evaluate the sentences RMC, GGA, GLL, GSA, VTG, ZDA and WPL. It SHALL accept every talker, in particular GP, GN, GL, GA, GB, BD and GQ. It SHALL ignore other sentences, such as GSV and proprietary `$P…` sentences, without a warning.
 
-#### Scenario: Multi-GNSS-Logger
-- **WHEN** eine Datei `$GNRMC`- und `$GNGGA`-Sätze enthält
-- **THEN** werden sie wie `$GPRMC` und `$GPGGA` ausgewertet
+#### Scenario: Multi-GNSS logger
+- **WHEN** a file contains `$GNRMC` and `$GNGGA` sentences
+- **THEN** they are evaluated like `$GPRMC` and `$GPGGA`
 
-#### Scenario: Satellitenstatus
-- **WHEN** eine Datei `$GPGSV`-Sätze enthält
-- **THEN** werden diese ohne Warnung übergangen
+#### Scenario: Satellite status
+- **WHEN** a file contains `$GPGSV` sentences
+- **THEN** they are skipped without a warning
 
-### Requirement: Zeilen und Prüfsummen
-Der Import SHALL Zeilen mit LF, CRLF oder CR als Ende akzeptieren. Zeilen, die nicht mit `$` beginnen, SHALL er ignorieren; das betrifft auch die `@`-Zeilen der Sony-Logger. Hat ein Satz eine Prüfsumme und stimmt sie nicht, MUST er verworfen und als Warnung gezählt werden. Sätze ohne Prüfsumme SHALL er akzeptieren.
+### Requirement: Lines and checksums
+The import SHALL accept lines ending with LF, CRLF or CR. It SHALL ignore lines that do not start with `$`; this includes the `@` lines of the Sony loggers. If a sentence has a checksum and it is wrong, the sentence MUST be discarded and counted as a warning. It SHALL accept sentences without a checksum.
 
-#### Scenario: Sony-Logdatei
-- **WHEN** eine Datei Zeilen enthält, die mit `@` beginnen
-- **THEN** werden diese Zeilen übergangen, und die übrigen Sätze werden ausgewertet
+#### Scenario: Sony log file
+- **WHEN** a file contains lines that start with `@`
+- **THEN** these lines are skipped, and the other sentences are evaluated
 
-#### Scenario: Falsche Prüfsumme
-- **WHEN** ein RMC-Satz eine falsche Prüfsumme hat
-- **THEN** entsteht daraus kein Punkt, und eine Warnung zählt den verworfenen Satz
+#### Scenario: Wrong checksum
+- **WHEN** an RMC sentence has a wrong checksum
+- **THEN** no point results from it, and a warning counts the discarded sentence
 
-#### Scenario: Abgeschnittene letzte Zeile
-- **WHEN** die letzte Zeile einer Datei mitten im Satz endet
-- **THEN** wird sie verworfen, und alle vorherigen Punkte bleiben erhalten
+#### Scenario: Truncated last line
+- **WHEN** the last line of a file ends in the middle of a sentence
+- **THEN** it is discarded, and all earlier points are kept
 
-### Requirement: Nur gültige Positionen
-Der Import MUST Positionen ohne gültigen Fix verwerfen: RMC und GLL mit Status `V`, GGA mit Fix-Qualität 0 und Sätze ohne Koordinaten. Solche Sätze SHALL keine Warnung erzeugen.
+### Requirement: Only valid positions
+The import MUST discard positions without a valid fix: RMC and GLL with status `V`, GGA with fix quality 0 and sentences without coordinates. Such sentences SHALL NOT produce a warning.
 
-#### Scenario: Logger ohne Empfang
-- **WHEN** eine Datei 50 RMC-Sätze mit Status `V` und danach 10 mit Status `A` enthält
-- **THEN** enthält der Track 10 Punkte
+#### Scenario: Logger without reception
+- **WHEN** a file contains 50 RMC sentences with status `V` and then 10 with status `A`
+- **THEN** the track contains 10 points
 
-### Requirement: Ein Punkt pro Zeitpunkt
-Sätze mit derselben UTC-Zeit SHALL zu einem Punkt zusammengefasst werden. Dabei gilt:
-- Koordinaten, Datum, Geschwindigkeit und Kurs kommen aus RMC.
-- Höhe über dem Meeresspiegel, Satellitenanzahl und HDOP kommen aus GGA.
-- Fix-Art, PDOP, HDOP und VDOP kommen aus GSA.
-- Geschwindigkeit und Kurs kommen ersatzweise aus VTG.
+### Requirement: One point per point in time
+Sentences with the same UTC time SHALL be combined into one point. The rules are:
+- Coordinates, date, speed and course come from RMC.
+- Altitude above sea level, number of satellites and HDOP come from GGA.
+- Fix type, PDOP, HDOP and VDOP come from GSA.
+- Speed and course come from VTG as a fallback.
 
-#### Scenario: RMC und GGA zur selben Sekunde
-- **WHEN** auf `$GPRMC` um 12:00:01 ein `$GPGGA` um 12:00:01 mit Höhe 94,5 m und 8 Satelliten folgt
-- **THEN** entsteht ein einziger Punkt mit den Koordinaten aus RMC, Höhe 94,5 m und 8 Satelliten
+#### Scenario: RMC and GGA in the same second
+- **WHEN** a `$GPRMC` at 12:00:01 is followed by a `$GPGGA` at 12:00:01 with altitude 94.5 m and 8 satellites
+- **THEN** a single point results with the coordinates from RMC, altitude 94.5 m and 8 satellites
 
-#### Scenario: Nur GGA
-- **WHEN** eine Datei nur GGA-Sätze enthält
-- **THEN** entsteht pro Satz mit gültigem Fix ein Punkt
+#### Scenario: GGA only
+- **WHEN** a file contains only GGA sentences
+- **THEN** one point results per sentence with a valid fix
 
-### Requirement: Datum und Zeit
-Der Import SHALL das Datum aus RMC oder ZDA übernehmen. Für Sätze ohne Datum (GGA, GLL) SHALL er das zuletzt bekannte Datum verwenden. Springt die Uhrzeit dabei von kurz vor auf kurz nach Mitternacht, SHALL er das Datum um einen Tag weiterzählen. Punkte vor dem ersten Datum SHALL das erste Datum der Datei erhalten. Zweistellige Jahre SHALL er als 1980 bis 2079 lesen. Alle Zeiten sind UTC; Bruchteile von Sekunden bleiben erhalten.
+### Requirement: Date and time
+The import SHALL take the date from RMC or ZDA. For sentences without a date (GGA, GLL) it SHALL use the last known date. If the time jumps from shortly before to shortly after midnight, it SHALL advance the date by one day. Points before the first date SHALL get the first date of the file. It SHALL read two-digit years as 1980 to 2079. All times are UTC; fractions of seconds are kept.
 
-#### Scenario: Mitternacht
-- **WHEN** auf ein RMC vom 02.11.26 um 23:59:59 nur GGA-Sätze um 00:00:00 und 00:00:01 folgen
-- **THEN** haben diese Punkte das Datum 3. November 2026
+#### Scenario: Midnight
+- **WHEN** an RMC of 02.11.26 at 23:59:59 is followed only by GGA sentences at 00:00:00 and 00:00:01
+- **THEN** these points have the date 3 November 2026
 
-#### Scenario: GGA vor dem ersten RMC
-- **WHEN** eine Datei mit drei GGA-Sätzen beginnt und erst danach ein RMC mit Datum folgt
-- **THEN** erhalten die drei Punkte das Datum dieses RMC
+#### Scenario: GGA before the first RMC
+- **WHEN** a file starts with three GGA sentences and only then an RMC with a date follows
+- **THEN** the three points get the date of this RMC
 
-#### Scenario: Datei ganz ohne Datum
-- **WHEN** eine Datei nur GGA-Sätze enthält
-- **THEN** haben die Punkte keine Zeit, und eine Warnung weist auf das fehlende Datum hin
+#### Scenario: File without any date
+- **WHEN** a file contains only GGA sentences
+- **THEN** the points have no time, and a warning points to the missing date
 
-### Requirement: Track-Aufteilung
-Alle Punkte einer Einlese-Operation SHALL einen Track bilden. Mehrere Dateien werden also zusammengeführt, wie in der Alt-App. Jede Datei SHALL ein neues Segment beginnen. Ebenso SHALL ein neues Segment beginnen, wenn die Zeit eines Punkts vor der des vorherigen liegt.
+### Requirement: Track splitting
+All points of one read operation SHALL form one track. So several files are merged, as in the old app. Every file SHALL start a new segment. A new segment SHALL also start when the time of a point lies before that of the previous one.
 
-#### Scenario: Drei Dateien eines Tages
-- **WHEN** drei NMEA-Dateien gemeinsam eingelesen werden
-- **THEN** enthält die Aufzeichnung einen Track mit drei Segmenten
+#### Scenario: Three files of one day
+- **WHEN** three NMEA files are read together
+- **THEN** the recording contains one track with three segments
 
-#### Scenario: Zeitrücksprung
-- **WHEN** innerhalb einer Datei auf 10:00:05 ein Punkt mit 09:00:00 folgt
-- **THEN** beginnt mit dem zweiten Punkt ein neues Segment
+#### Scenario: Time jumps back
+- **WHEN** within one file a point at 09:00:00 follows one at 10:00:05
+- **THEN** a new segment starts with the second point
 
-### Requirement: Wegpunkte
-WPL-Sätze SHALL als Wegpunkte mit Namen übernommen werden.
+### Requirement: Waypoints
+WPL sentences SHALL be taken over as waypoints with names.
 
-#### Scenario: WPL-Satz
-- **WHEN** eine Datei `$GPWPL,5144.4694,N,00840.8580,E,HOME*..` enthält
-- **THEN** enthält die Aufzeichnung einen Wegpunkt „HOME“ bei 51,741157° N, 8,680967° E
+#### Scenario: WPL sentence
+- **WHEN** a file contains `$GPWPL,5144.4694,N,00840.8580,E,HOME*..`
+- **THEN** the recording contains a waypoint "HOME" at 51.741157° N, 8.680967° E
 
-### Requirement: Erkennung
-Die Formaterkennung SHALL eine Datei als NMEA 0183 erkennen, wenn unter ihren ersten Zeilen mindestens drei syntaktisch gültige NMEA-Sätze sind.
+### Requirement: Detection
+The format detection SHALL recognize a file as NMEA 0183 if its first lines contain at least three syntactically valid NMEA sentences.
 
-#### Scenario: Canon-EOS-Log
-- **WHEN** eine `.LOG`-Datei der Canon EOS mit einer Kopfzeile und folgenden RMC/GGA-Sätzen geprüft wird
-- **THEN** schlägt die Erkennung NMEA 0183 vor
+#### Scenario: Canon EOS log
+- **WHEN** a `.LOG` file of the Canon EOS with a header line and following RMC/GGA sentences is checked
+- **THEN** the detection suggests NMEA 0183

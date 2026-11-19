@@ -126,7 +126,7 @@ private final class KMLParserHandler: NSObject, XMLParserDelegate {
         var line: Int
     }
 
-    /// Subtrees that are not evaluated (spec "Unbekannte Inhalte").
+    /// Subtrees that are not evaluated (spec "Unknown content").
     private static let ignored: Set<String> = [
         "Style", "StyleMap", "ExtendedData", "Schema", "Region", "LookAt", "Camera", "Tour", "NetworkLink",
         "Update", "Polygon", "LinearRing", "Model", "GroundOverlay", "ScreenOverlay", "PhotoOverlay", "TimeSpan",
@@ -344,7 +344,7 @@ private final class KMLParserHandler: NSObject, XMLParserDelegate {
         }
     }
 
-    /// Spec "Höhe": kept for `absolute` or no mode, dropped for any explicit ground or sea floor
+    /// Spec "Altitude": kept for `absolute` or no mode, dropped for any explicit ground or sea floor
     /// reference and when all altitudes of the geometry are 0.
     static func applyingAltitudeRule(_ positions: [KMLPosition], altitudeMode: String?) -> [KMLPosition] {
         let keep = (altitudeMode == nil || altitudeMode == "absolute")
